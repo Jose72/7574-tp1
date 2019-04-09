@@ -3,8 +3,8 @@
   "port_post" : 7060,
   "port_get" : 7070,
   "max_con" : 200,
-  "workers_post" : 1,
-  "workers_get" : 0,
+  "workers_post" : 3,
+  "workers_get" : 3,
   "file_folder" : "./logs/",
   "shard_size" : 500000
 }

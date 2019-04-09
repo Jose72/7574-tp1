@@ -1,0 +1,15 @@
+version: '3'
+services:
+        server:
+                image: 7574-tp1-server
+                ports: 
+                      - "6060:6060"
+                      - "6070:6070"
+                links:
+                        - db
+
+        db:     
+                image: 7574-tp1-db
+                ports: 
+                      - "7060:7060"
+                      - "7070:7070"
