@@ -1,11 +1,7 @@
-import json
-
-import os
-
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 from utils.socket import ServerSocket
 from server.request_handler import RequestHandler
-
+from server.response_handler import ResponseHandler
 from pprint import pprint
 
 
@@ -15,8 +11,6 @@ class Server(Process):
 
         super(Server, self).__init__()
 
-
-
         pprint(config_info)
 
         self.ip_address = config_info['ip_address']
@@ -24,7 +18,8 @@ class Server(Process):
         self.max_con = config_info['max_con']
         self.workers_n = config_info['workers_n']
         self.code = code
-        self.process_pool = []
+        self.request_process_pool = []
+        self.response_process_pool = []
         self.sock = ServerSocket()
         self.sock.init(self.ip_address, self.port, self.max_con)
         self.db_ip = config_info['db_ip']
@@ -38,15 +33,27 @@ class Server(Process):
         try:
             print(str(self.code) + ' Server: Running')
 
-            # Create workers
+            pending_req_queue = Queue()
+
+            # Create request workers
             for i in range(0, self.workers_n):
-                w = RequestHandler(i, self.sock, self.code, (self.db_ip, self.db_port))
-                self.process_pool.append(w)
+                w = RequestHandler(i, self.sock, self.code, (self.db_ip, self.db_port), pending_req_queue)
+                self.request_process_pool.append(w)
+                w.start()
+
+            # Create response workers
+            for i in range(0, self.workers_n):
+                w = ResponseHandler(i, self.code, pending_req_queue)
+                self.response_process_pool.append(w)
                 w.start()
 
             # Wait for workers to finish
             for i in range(0, self.workers_n):
-                self.process_pool[i].join()
+                self.request_process_pool[i].join()
+
+            # Wait for workers to finish
+            for i in range(0, self.workers_n):
+                self.response_process_pool[i].join()
 
             # Close the socket
             self.sock.close()
@@ -57,12 +64,13 @@ class Server(Process):
             self.end = True
             print(str(self.code) + ' Server: Interrupted')
             # Wait for workers to finish
-            for p in self.process_pool:
-                p.finish()
+            for p in self.request_process_pool:
+                p.join()
+
+            # Wait for workers to finish
+            for p in self.response_process_pool:
                 p.join()
 
             # Close the socket
             self.sock.close()
             print(str(self.code) + ' Server: Finishing Interrupt')
-
-
