@@ -6,7 +6,7 @@ class Socket:
         self.socket = None
 
     def send(self, buff):
-        return self.socket.send(buff.encode('utf-8'))
+        return self.socket.sendall(buff.encode('utf-8'))
 
     def recv(self, buff_size):
         return (self.socket.recv(buff_size)).decode('utf-8')

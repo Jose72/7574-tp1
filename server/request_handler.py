@@ -15,7 +15,6 @@ class RequestHandler(Process):
         self.code = code
         self.end = False
         self.pending_req_queue = p_r_queue
-        # self.subprocess = ResponseHandler(self.worker_id, self.code, self.subprocess_queue, self.end)
         self.db_ip = db_info[0]
         self.db_port = db_info[1]
 
@@ -24,7 +23,6 @@ class RequestHandler(Process):
     def run(self):
 
         try:
-            #self.subprocess.start()
 
             print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Started')
 
@@ -59,6 +57,9 @@ class RequestHandler(Process):
             print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Finished')
 
         except KeyboardInterrupt:
-            print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Interrupted')
+            self.end = True
             self.pending_req_queue.put("end")
+            print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Interrupted')
+
+        finally:
             self.sock.close()

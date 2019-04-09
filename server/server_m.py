@@ -25,7 +25,7 @@ class Server(Process):
         self.db_ip = config_info['db_ip']
         self.db_port = config_info['db_port']
 
-        self.end = False  # end the process
+        self.end = False
         print(str(self.code) + ' Server: Init')
 
     def run(self):
@@ -58,19 +58,22 @@ class Server(Process):
             # Close the socket
             self.sock.close()
 
-            print(str(self.code) + ' Server: Exiting')
-
         except KeyboardInterrupt:
+
             self.end = True
             print(str(self.code) + ' Server: Interrupted')
-            # Wait for workers to finish
+
+        finally:
+
+            # Wait for request workers to finish
             for p in self.request_process_pool:
                 p.join()
 
-            # Wait for workers to finish
+            # Wait for response workers to finish
             for p in self.response_process_pool:
                 p.join()
 
             # Close the socket
             self.sock.close()
-            print(str(self.code) + ' Server: Finishing Interrupt')
+
+            print(str(self.code) + ' Server: Exiting')

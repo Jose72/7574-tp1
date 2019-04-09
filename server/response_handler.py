@@ -1,6 +1,6 @@
-from multiprocessing import Process, Queue
+from multiprocessing import Process
 from utils.parser import HttpParser
-from utils.socket import Socket
+import signal
 
 
 class ResponseHandler(Process):
@@ -14,6 +14,9 @@ class ResponseHandler(Process):
         self.end = False
 
     def run(self):
+
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
         print(str(self.code) + " Response Handler: " + str(self.worker_id) + " - Started")
 
         while not self.end:
@@ -29,10 +32,10 @@ class ResponseHandler(Process):
 
             r_size = db_sock.recv_f(4)
             result = db_sock.recv_f(int(r_size))
-            db_sock.close()
 
             result = HttpParser.generate_response('200 OK', result)
             print(str(self.code) + " Response Handler: " + str(self.worker_id) + ' - Data: \n' + str(result))
             c_sock.send(result)
 
+            db_sock.close()
             c_sock.close()
