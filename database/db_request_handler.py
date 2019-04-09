@@ -33,7 +33,7 @@ class DBRequestHandler(Process):
                 (c_fd, addr) = self.sock.accept()
 
                 c_sock = ServerSocket()
-                c_sock.move(c_fd)
+                c_sock.move_from(c_fd)
 
                 m_size = c_sock.recv_f(4)
                 print("m_size: " + str(m_size))

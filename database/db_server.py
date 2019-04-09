@@ -1,6 +1,7 @@
 from multiprocessing import Process, Lock
 from utils.socket import ServerSocket
 from database.db_request_handler import DBRequestHandler
+import sys
 
 
 class DBServer(Process):
@@ -39,14 +40,13 @@ class DBServer(Process):
                 w = DBRequestHandler(i, self.sock_post, 'POST', lock, self.shard_size, self.file_folder)
                 self.process_pool_post.append(w)
                 w.start()
-
+            print("ccaca")
             # Create get workers
             for i in range(0, self.workers_get):
                 w = DBRequestHandler(i, self.sock_get, 'GET', lock, self.shard_size, self.file_folder)
                 self.process_pool_get.append(w)
                 w.start()
 
-            # Wait for workers to finish
             for p in self.process_pool_post:
                 p.join()
 

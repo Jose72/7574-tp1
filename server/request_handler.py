@@ -32,7 +32,7 @@ class RequestHandler(Process):
                 (c_fd, addr) = self.sock.accept()
 
                 c_sock = ServerSocket()
-                c_sock.move(c_fd)
+                c_sock.move_from(c_fd)
 
                 request = c_sock.recv(1024)
                 print("request : " + str(request))
