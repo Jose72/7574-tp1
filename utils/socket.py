@@ -23,6 +23,9 @@ class Socket:
     def close(self):
         self.socket.close()
 
+    def shutdown(self, code):
+        self.socket.shutdown(code)
+
     def move_from(self, fd):
         self.socket = fd
         fd = None

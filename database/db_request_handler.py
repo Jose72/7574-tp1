@@ -35,7 +35,7 @@ class DBRequestHandler(Process):
                 c_sock = ServerSocket()
                 c_sock.move_from(c_fd)
 
-                m_size = c_sock.recv_f(4)
+                m_size = c_sock.recv_f(8)
                 print("m_size: " + str(m_size))
                 request = c_sock.recv_f(int(m_size))
 
@@ -44,10 +44,8 @@ class DBRequestHandler(Process):
                 processor = DBProcessRequest(self.file_folder, self.shard_size, self.lock)
                 res = processor.process(self.code, request)
 
-                #c_sock.send(numb_to_str_with_zeros(len(res), 4))
-                c_sock.send(str(len(res)).zfill(4))
+                c_sock.send(str(len(res)).zfill(8))
                 c_sock.send(res)
-
 
             # Close socket
             self.sock.close()

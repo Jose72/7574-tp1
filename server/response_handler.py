@@ -21,21 +21,25 @@ class ResponseHandler(Process):
 
         while not self.end:
 
-            p = self.queue.get()
+            try:
 
-            if p == "end":
-                print(str(self.code) + " Response Handler: " + str(self.worker_id) + " - Finished")
-                return
+                p = self.queue.get()
 
-            c_sock = p[0]
-            db_sock = p[1]
+                if p == "end":
+                    print(str(self.code) + " Response Handler: " + str(self.worker_id) + " - Finished")
+                    return
 
-            r_size = db_sock.recv_f(4)
-            result = db_sock.recv_f(int(r_size))
+                c_sock = p[0]
+                db_sock = p[1]
 
-            result = HttpParser.generate_response('200 OK', result)
-            print(str(self.code) + " Response Handler: " + str(self.worker_id) + ' - Data: \n' + str(result))
-            c_sock.send(result)
+                r_size = db_sock.recv_f(8)
+                result = db_sock.recv_f(int(r_size))
 
-            db_sock.close()
-            c_sock.close()
+                result = HttpParser.generate_response('200 OK', result)
+                print(str(self.code) + " Response Handler: " + str(self.worker_id) + ' - Data: \n' + str(result))
+                c_sock.send(result)
+            finally:
+                if db_sock:
+                    db_sock.close()
+                if c_sock:
+                    c_sock.close()

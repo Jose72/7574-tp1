@@ -1,0 +1,2 @@
+curl -v -X POST -H "Content-Type: application/json" --data @"./d.json" http://127.0.0.1:6060/log
+

@@ -24,6 +24,7 @@ class Server(Process):
         self.sock.init(self.ip_address, self.port, self.max_con)
         self.db_ip = config_info['db_ip']
         self.db_port = config_info['db_port']
+        self.max_requests = config_info['max_requests']
 
         self.end = False
         print(str(self.code) + ' Server: Init')
@@ -33,7 +34,7 @@ class Server(Process):
         try:
             print(str(self.code) + ' Server: Running')
 
-            pending_req_queue = Queue()
+            pending_req_queue = Queue(maxsize=self.max_requests)
 
             # Create request workers
             for i in range(0, self.workers_n):

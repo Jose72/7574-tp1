@@ -1,7 +1,8 @@
-import threading
 from utils.parser import HttpParser
 from utils.socket import ClientSocket, ServerSocket
 from multiprocessing import Process
+import socket
+import time
 
 
 class RequestHandler(Process):
@@ -22,6 +23,9 @@ class RequestHandler(Process):
 
     def run(self):
 
+        db_sock = None
+        c_sock = None
+
         try:
 
             print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Started')
@@ -32,16 +36,17 @@ class RequestHandler(Process):
                 c_sock = ServerSocket()
                 c_sock.move_from(c_fd)
 
-                request = c_sock.recv(1024)
+                request = c_sock.recv(4096)
                 print("request : " + str(request))
 
                 if HttpParser.check_correct_service(request, self.code, '/log'):
 
-                    # send to db
+                    # check if the queue is full first
+                    # if not send to db server
                     db_sock = ClientSocket()
                     db_sock.connect(self.db_ip, self.db_port)
                     db_msg = HttpParser.parse(self.code, request)
-                    db_sock.send(str(len(db_msg)).zfill(4))
+                    db_sock.send(str(len(db_msg)).zfill(8))
                     db_sock.send(db_msg)
 
                     # send sockets to response handler
