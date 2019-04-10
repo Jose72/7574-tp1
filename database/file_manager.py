@@ -25,6 +25,10 @@ class FileManager:
         self.lock = Lock()
         self.files = []
 
+        files = get_file_names_in_dir(self.log_dir)
+        for f in files:
+            self.files.append(File(self.log_dir + f))
+
     def get_file(self, f_name):
         for f in self.files:
             if f.is_same_file(self.log_dir + f_name):
@@ -48,7 +52,7 @@ class FileManager:
 
         # filter the right ones by extension and only take the names
         if len(files):
-            files = [f for f in files if '.csv' in f]
+            files = [f for f in files if FILE_EXTENSION in f]
             files = [f for f in files if s_id in f.split(UNDERSCORE)[1]]
 
         return files
@@ -90,5 +94,21 @@ class FileManager:
             self.lock.release()
 
     def get_files_to_read(self, log_app_id):
-        files = self.get_file_names_by_id(log_app_id)
-        return [self.get_file(self.log_dir + f) for f in files]
+        self.lock.acquire()
+
+        try:
+            #files = self.get_file_names_by_id(log_app_id)
+            return [f for f in self.files if f.is_id(log_app_id)]
+
+        finally:
+            self.lock.release()
+
+
+def get_file_names_in_dir(dir_path):
+    files = [f for f in listdir(dir_path) if isfile(join(dir_path, f))]
+
+    # filter the right ones by extension
+    if len(files):
+        files = [f for f in files if FILE_EXTENSION in f]
+
+    return files

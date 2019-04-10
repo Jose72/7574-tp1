@@ -1,8 +1,8 @@
 from multiprocessing import Lock
 import csv
 import json
-from database.processing import get_list
-import datetime
+from database.parsing import get_list, numb_to_str_with_zeros
+import datetime as dt
 
 FILE_NAME_START = 'log'
 UNDERSCORE = '_'
@@ -48,17 +48,16 @@ class File:
 
                     # Check correct date
                     if q_date_from:
-                        cond_date = (datetime.datetime.strptime(q_date_from, '%b %d %Y %I:%M%p') <=
-                                         datetime.datetime.strptime(l_date, '%b %d %Y %I:%M%p'))
+                        cond_date = (dt.datetime.strptime(q_date_from, '%Y/%m/%d %H:%M:%S.%f') <=
+                                     dt.datetime.strptime(l_date, '%Y/%m/%d %H:%M:%S.%f'))
 
                     if q_date_to:
-                        cond_date = (datetime.datetime.strptime(q_date_to, '%a, %d %b %Y %H:%M:%S GMT') >=
-                                         datetime.datetime.strptime(l_date, '%a, %d %b %Y %H:%M:%S GMT'))
-                    # 'Sun, 07 Apr 2019 22:07:55 GMT'
+                        cond_date = (dt.datetime.strptime(q_date_to, '%Y/%m/%d %H:%M:%S.%f') >=
+                                     dt.datetime.strptime(l_date, '%Y/%m/%d %H:%M:%S.%f'))
 
                     cond_pattern = (q_pattern in l_message)
 
-                    print("tags: " + str(cond_tags) + " date: " + str(cond_date) + "pattern: " + str(cond_pattern))
+                    #print("tags: " + str(cond_tags) + " date: " + str(cond_date) + "pattern: " + str(cond_pattern))
 
                     if cond_tags & cond_date & cond_pattern:
                         result.append(e)
@@ -84,3 +83,8 @@ class File:
 
     def is_same_file(self, f_path):
         return self.file_path == f_path
+
+    def is_id(self, f_id):
+        x = (self.file_path.split('/'))[-1]
+        x = (x.split(UNDERSCORE))[1]
+        return (numb_to_str_with_zeros(f_id, DIGITS_FOR_FILE_ID)) == x

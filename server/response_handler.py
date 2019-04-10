@@ -29,13 +29,16 @@ class ResponseHandler(Thread):
             c_sock = p[0]
             db_sock = p[1]
 
+            print(str(self.code) + " Response Handler: " + str(self.worker_id) + " - New response from DB")
+
             try:
                 r_size = db_sock.recv_f(8)
                 result = db_sock.recv_f(int(r_size))
 
                 result = HttpParser.generate_response('200 OK', result)
-                print(str(self.code) + " Response Handler: " + str(self.worker_id) + ' - Data: \n' + str(result))
+                #print(str(self.code) + " Response Handler: " + str(self.worker_id) + ' - Data: \n' + str(result))
                 c_sock.send(result)
+                print(str(self.code) + " Response Handler: " + str(self.worker_id) + " - Response sent to client")
 
             finally:
                 if db_sock:

@@ -37,16 +37,17 @@ class DBRequestHandler(Process):
                 c_sock.move_from(c_fd)
 
                 m_size = c_sock.recv_f(8)
-                print("m_size: " + str(m_size))
                 request = c_sock.recv_f(int(m_size))
 
-                print(request)
+                print(str(self.code) + ' DB Handler process: ' + str(self.worker_id) + ' - Request received')
 
                 processor = DBProcessRequest(self.file_folder, self.shard_size, self.file_manager)
                 res = processor.process(self.code, request)
 
                 c_sock.send(str(len(res)).zfill(8))
                 c_sock.send(res)
+
+                print(str(self.code) + ' DB Handler process: ' + str(self.worker_id) + ' - Response sent')
 
             # Close socket
             self.sock.close()

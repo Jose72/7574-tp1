@@ -29,26 +29,26 @@ class RequestHandler(Process):
 
     def run(self):
 
-        # signal.signal(signal.SIGINT, signal.SIG_IGN)
+        print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Started')
 
-        db_sock = None
-        c_sock = None
-
+        # Start the response handler thread
         self.response_handler.start()
 
         try:
 
-            print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Started')
-
             while not self.end:
+
+                # Accept a new connection
                 (c_fd, addr) = self.sock.accept()
 
                 c_sock = ServerSocket()
                 c_sock.move_from(c_fd)
 
+                # Receive the http package
                 request = c_sock.recv(4096)
                 print("request : " + str(request))
 
+                # If the the right one ok
                 if HttpParser.check_correct_service(request, self.code, '/log'):
 
                     # check if the queue is full first
@@ -56,6 +56,7 @@ class RequestHandler(Process):
                     db_sock = ClientSocket()
                     db_sock.connect(self.db_ip, self.db_port)
                     db_msg = HttpParser.parse(self.code, request)
+                    print("db_msg: " + db_msg)
                     db_sock.send(str(len(db_msg)).zfill(8))
                     db_sock.send(db_msg)
 
@@ -67,16 +68,15 @@ class RequestHandler(Process):
                     c_sock.close()
                     print(str(self.code) + " Response Handler: " + str(self.worker_id) + ' - Wrong request: ')
 
-            self.pending_req_queue.put("end")
-            self.sock.close()
             print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Finished')
 
         except KeyboardInterrupt:
             self.end = True
-            self.pending_req_queue.put("end")
             print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Interrupted')
 
         finally:
+            # Send message to end the thread and close the accepting socket
+            self.pending_req_queue.put("end")
             self.sock.close()
             self.response_handler.join()
 

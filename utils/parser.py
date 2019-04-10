@@ -23,13 +23,10 @@ class HttpParser:
 
     @staticmethod
     def parse_get(request):
-        if not request:
-            return ''
-        f_line = request.split('\n')[0]
-        url = f_line.split(' ')[1]
-        parsed_url = urlparse(url)
-        queries = parse_qs(parsed_url.query)
-        queries = str(queries).replace('log', 'logTags')
+        queries = ''
+        f_line = request.split('\n')  # split by new line
+        f_line = [x for x in f_line if x]  # remove empty strings
+        queries = f_line[-1]  # get the payload
         return queries
 
     @staticmethod

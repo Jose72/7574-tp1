@@ -2,8 +2,8 @@
   "ip_address" : "127.0.0.1",
   "port" : 6060,
   "max_con" : 200,
-  "workers_n" : 4,
+  "workers_n" : 3,
   "db_ip" :  "127.0.0.1",
   "db_port": 7060,
-  "max_requests" : 500
+  "max_requests" : 1000
 }
