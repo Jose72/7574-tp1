@@ -19,7 +19,6 @@ class Server(Process):
         self.workers_n = config_info['workers_n']
         self.code = code
         self.request_process_pool = []
-        self.response_process_pool = []
         self.sock = ServerSocket()
         self.sock.init(self.ip_address, self.port, self.max_con)
         self.db_ip = config_info['db_ip']
@@ -34,27 +33,15 @@ class Server(Process):
         try:
             print(str(self.code) + ' Server: Running')
 
-            pending_req_queue = Queue(maxsize=self.max_requests)
-
             # Create request workers
             for i in range(0, self.workers_n):
-                w = RequestHandler(i, self.sock, self.code, (self.db_ip, self.db_port), pending_req_queue)
+                w = RequestHandler(i, self.sock, self.code, (self.db_ip, self.db_port), (self.max_requests / self.workers_n))
                 self.request_process_pool.append(w)
-                w.start()
-
-            # Create response workers
-            for i in range(0, self.workers_n):
-                w = ResponseHandler(i, self.code, pending_req_queue)
-                self.response_process_pool.append(w)
                 w.start()
 
             # Wait for workers to finish
             for i in range(0, self.workers_n):
                 self.request_process_pool[i].join()
-
-            # Wait for workers to finish
-            for i in range(0, self.workers_n):
-                self.response_process_pool[i].join()
 
             # Close the socket
             self.sock.close()
@@ -68,10 +55,6 @@ class Server(Process):
 
             # Wait for request workers to finish
             for p in self.request_process_pool:
-                p.join()
-
-            # Wait for response workers to finish
-            for p in self.response_process_pool:
                 p.join()
 
             # Close the socket

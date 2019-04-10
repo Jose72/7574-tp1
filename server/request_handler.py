@@ -1,13 +1,17 @@
 from utils.parser import HttpParser
 from utils.socket import ClientSocket, ServerSocket
 from multiprocessing import Process
+from server.response_handler import ResponseHandler
+from threading import Thread
+import multiprocessing
+import signal
 import socket
 import time
 
 
 class RequestHandler(Process):
 
-    def __init__(self, i, server_socket, code, db_info, p_r_queue):
+    def __init__(self, i, server_socket, code, db_info, max_req):
 
         super(RequestHandler, self).__init__()
 
@@ -15,16 +19,22 @@ class RequestHandler(Process):
         self.sock = server_socket
         self.code = code
         self.end = False
-        self.pending_req_queue = p_r_queue
+        self.max_req = max_req
+        self.pending_req_queue = multiprocessing.Queue(maxsize=int(self.max_req))
         self.db_ip = db_info[0]
         self.db_port = db_info[1]
+        self.response_handler = ResponseHandler(i, self.code, self.pending_req_queue)
 
         print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Init')
 
     def run(self):
 
+        # signal.signal(signal.SIGINT, signal.SIG_IGN)
+
         db_sock = None
         c_sock = None
+
+        self.response_handler.start()
 
         try:
 
@@ -49,12 +59,12 @@ class RequestHandler(Process):
                     db_sock.send(str(len(db_msg)).zfill(8))
                     db_sock.send(db_msg)
 
-                    # send sockets to response handler
                     self.pending_req_queue.put([c_sock, db_sock])
 
                     print(str(self.code) + " Response Handler: " + str(self.worker_id) + ' - Data: ' +
                           str(HttpParser.parse(self.code, request)))
                 else:
+                    c_sock.close()
                     print(str(self.code) + " Response Handler: " + str(self.worker_id) + ' - Wrong request: ')
 
             self.pending_req_queue.put("end")
@@ -68,3 +78,8 @@ class RequestHandler(Process):
 
         finally:
             self.sock.close()
+            self.response_handler.join()
+
+
+
+
