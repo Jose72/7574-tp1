@@ -1,5 +1,5 @@
 {
-  "ip_address" : "127.0.0.1",
+  "ip_address" : "0.0.0.0",
   "port_post" : 7060,
   "port_get" : 7070,
   "max_con" : 200,
