@@ -1,6 +1,7 @@
 from multiprocessing import Process, Lock
 from utils.socket import ServerSocket
 from database.db_request_handler import DBRequestHandler
+from database.file_manager import FileManager
 import sys
 
 
@@ -24,6 +25,7 @@ class DBServer(Process):
         self.sock_post.init(self.ip_address, self.port_post, self.max_con)
         self.sock_get = ServerSocket()
         self.sock_get.init(self.ip_address, self.port_get, self.max_con)
+        self.file_manager = FileManager(self.file_folder, self.shard_size)
 
         self.end = False  # end the process
         print('DB Server: Init')
@@ -37,13 +39,15 @@ class DBServer(Process):
 
             # Create post workers
             for i in range(0, self.workers_post):
-                w = DBRequestHandler(i, self.sock_post, 'POST', lock, self.shard_size, self.file_folder)
+                w = DBRequestHandler(i, self.sock_post, 'POST', lock, self.shard_size,
+                                     self.file_folder, self.file_manager)
                 self.process_pool_post.append(w)
                 w.start()
                 
             # Create get workers
             for i in range(0, self.workers_get):
-                w = DBRequestHandler(i, self.sock_get, 'GET', lock, self.shard_size, self.file_folder)
+                w = DBRequestHandler(i, self.sock_get, 'GET', lock, self.shard_size,
+                                     self.file_folder, self.file_manager)
                 self.process_pool_get.append(w)
                 w.start()
 

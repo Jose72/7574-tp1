@@ -14,7 +14,7 @@ FILE_EXTENSION = '.csv'
 
 class DBProcessRequest:
 
-    def __init__(self, dir_path, shard_size, lock):
+    def __init__(self, dir_path, shard_size, file_manager):
 
         # if the directory doe not exist then create it
         if not os.path.exists(dir_path):
@@ -22,7 +22,7 @@ class DBProcessRequest:
 
         self.log_dir = dir_path
         self.shard_size = shard_size
-        self.lock = lock
+        self.file_manager = file_manager
 
     def process_get(self, queries):
 
@@ -59,9 +59,6 @@ class DBProcessRequest:
                 # If the file can be writen locking its needed
                 can_write_file = f_size >= self.shard_size
 
-                if can_write_file:
-                    self.lock.acquire()
-
                 for e in reader:
 
                     e = json.loads(json.dumps(e))
@@ -94,9 +91,6 @@ class DBProcessRequest:
                     if cond_tags & cond_date & cond_pattern:
                         result.append(e)
 
-                if can_write_file:
-                    self.lock.release()
-
         print(result)
         return result
 
@@ -109,48 +103,12 @@ class DBProcessRequest:
         fieldnames = ['logTags', 'message', 'timestamp']
 
         for e in json_logs:
-            l_appid = e['AppId']
+            log_app_id = e['AppId']
             del e['AppId']
-            s_id = numb_to_str_with_zeros(l_appid, DIGITS_FOR_FILE_ID)
+            w_file = self.file_manager.get_file_to_write(log_app_id)
+            w_file.write_log(e, fieldnames)
 
-            # Get a list of files with the corresponding app id
-            files = [f for f in listdir(self.log_dir) if isfile(join(self.log_dir, f))]
-
-            if len(files):
-                files = [f for f in files if '.csv' in f]
-                files = [f for f in files if s_id in f.split(UNDERSCORE)[1]]
-
-            #print("files: " + str(files))
-
-            # look for the last file
-            last_f = last_file(files)
-
-            # If no file was found create a new one,
-            # else take the size of the file
-            f_size = 0
-            if not last_f:
-                last_f = create_new_file_name(last_f, l_appid)
-            else:
-                f_size = os.path.getsize(self.log_dir + last_f)
-
-            #print(last_f + " - fsize: " + str(f_size))
-
-            # Check if there is enough space in the file,
-            # if not create new file
-            if f_size >= self.shard_size:
-                last_f = create_new_file_name(last_f, l_appid)
-                print("new file: " + last_f)
-
-            # Open file and write data
-            # lock the writing
-            with open(self.log_dir + last_f, 'a+') as cf:
-                print("file opened: " + self.log_dir + last_f)
-                writer = csv.DictWriter(cf, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL,
-                                        fieldnames=fieldnames)
-                self.lock.acquire()
-                writer.writerow(e)
-                self.lock.release()
-                cf.close()
+        print("all good")
 
         return '200 OK'
 
@@ -173,9 +131,6 @@ def create_new_file_name(last_f_name, app_id):
     return new_f_name + FILE_EXTENSION
 
 
-# Given an integer and an amount of digits, creates a string
-# with the integer an pads the rest with 0's in the beginning
-# returns full 0's if the length on the number surpasses the amount of digits
 def numb_to_str_with_zeros(num, digits):
     n = str(num)
     z = 0
@@ -201,3 +156,4 @@ def get_list(s):
     s = s.replace("]", '')
     s = s.split(',')
     return [x.strip() for x in s]
+

@@ -9,7 +9,7 @@ import sys
 
 class DBRequestHandler(Process):
 
-    def __init__(self, i, server_socket, code, lock, shard_size, file_folder):
+    def __init__(self, i, server_socket, code, lock, shard_size, file_folder, file_manager):
 
         super(DBRequestHandler, self).__init__()
 
@@ -20,6 +20,7 @@ class DBRequestHandler(Process):
         self.lock = lock
         self.shard_size = shard_size
         self.file_folder = file_folder
+        self.file_manager = file_manager
 
         print(str(self.code) + ' DB Handler process: ' + str(self.worker_id) + ' - Init')
 
@@ -41,7 +42,7 @@ class DBRequestHandler(Process):
 
                 print(request)
 
-                processor = DBProcessRequest(self.file_folder, self.shard_size, self.lock)
+                processor = DBProcessRequest(self.file_folder, self.shard_size, self.file_manager)
                 res = processor.process(self.code, request)
 
                 c_sock.send(str(len(res)).zfill(8))
