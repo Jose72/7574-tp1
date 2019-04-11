@@ -23,6 +23,8 @@ class DBServer(Process):
         self.workers_post = config_info['workers_post']
         self.workers_get = config_info['workers_get']
         self.file_folder = config_info['file_folder']
+        if not os.path.exists(self.file_folder):
+            os.mkdir(self.file_folder, 0o755)
         self.process_pool_post = []
         self.process_pool_get = []
         self.shard_size = config_info['shard_size']

@@ -58,10 +58,11 @@ class File:
 
                     cond_pattern = (q_pattern in l_message)
 
-                    # print("tags: " + str(cond_tags) + " date: " + str(cond_date) + "pattern: " + str(cond_pattern))
+                    #print("tags: " + str(cond_tags) + " date: " + str(cond_date) + "pattern: " + str(cond_pattern))
 
                     if cond_tags & cond_date & cond_pattern:
                         result.append(e)
+                        #print("partial: " + str(result))
 
             cf.close()
             return result

@@ -2,15 +2,18 @@ from utils.socket import ClientSocket
 from multiprocessing import Process
 from test.generator import generate_post_request, generate_get_request
 import json
+from os.path import isfile, join
+from os import listdir
 
 NEW_LINE = '\n'
-GETS_TO_SEND_PER_PROCESS = 50
-POSTS_TO_SEND_PER_PROCESS = 500
-GET_PROCESSES = 4
-POST_PROCESSES = 4
+GETS_TO_SEND_PER_PROCESS = 10
+POSTS_TO_SEND_PER_PROCESS = 200
+GET_PROCESSES = 0
+POST_PROCESSES = 2
 
 
 def main():
+
     p = []
     for i in range(0, POST_PROCESSES):
         wp = PostSender()
@@ -71,7 +74,7 @@ class GetSender(Process):
             socket.connect('localhost', 6070)
             socket.send(str(r))
             res = socket.recv(1024)
-            #print(res)
+            print(res)
             while res:
                 res = socket.recv(1024)
             socket.close()

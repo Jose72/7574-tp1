@@ -1,5 +1,7 @@
 
 import socket
+
+from threading import Thread
 from multiprocessing import Queue, Process
 from database.processing import DBProcessRequest
 from utils.parser import numb_to_str_with_zeros
@@ -11,7 +13,7 @@ import os
 P_NAME = 'DB Request Handler'
 
 
-class DBRequestHandler(Process):
+class DBRequestHandler(Thread):
 
     def __init__(self, i, server_socket, code, shard_size, file_folder, file_manager, log_queue):
 

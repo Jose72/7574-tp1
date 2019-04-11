@@ -17,10 +17,6 @@ class DBProcessRequest:
 
     def __init__(self, dir_path, shard_size, file_manager):
 
-        # if the directory doe not exist then create it
-        if not os.path.exists(dir_path):
-            os.mkdir(dir_path, 0o755)
-
         self.log_dir = dir_path
         self.shard_size = shard_size
         self.file_manager = file_manager
@@ -41,7 +37,7 @@ class DBProcessRequest:
 
         files = self.file_manager.get_files_to_read(q_app_id)
 
-        # print(len(files))
+        #print(len(files))
 
         for f in files:
             result += f.read_logs(fieldnames, q_tags, q_date_from, q_date_to, q_pattern)

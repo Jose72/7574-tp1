@@ -26,6 +26,7 @@ class FileManager:
         self.files = []
 
         files = get_file_names_in_dir(self.log_dir)
+
         for f in files:
             self.files.append(File(self.log_dir + f))
 
@@ -87,7 +88,7 @@ class FileManager:
 
             # if not create the new one and return it
             w_file = File(self.log_dir + last_f)
-            self.files.append(File(w_file))
+            self.files.append(w_file)
             return w_file
 
         finally:
@@ -98,7 +99,8 @@ class FileManager:
 
         try:
             #files = self.get_file_names_by_id(log_app_id)
-            return [f for f in self.files if f.is_id(log_app_id)]
+            files = [f for f in self.files if f.is_id(log_app_id)]
+            return files
 
         finally:
             self.lock.release()
