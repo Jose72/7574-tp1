@@ -44,8 +44,6 @@ class DBProcessRequest:
         for f in files:
             result += f.read_logs(fieldnames, q_tags, q_date_from, q_date_to, q_pattern)
 
-        print(len(files))
-
         # formating result
         result = json.dumps(result)
 

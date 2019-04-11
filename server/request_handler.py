@@ -6,12 +6,17 @@ from threading import Thread
 import multiprocessing
 import signal
 import socket
+import datetime as dt
+import os
 import time
+from utils.logger import create_log_msg
+
+P_NAME = 'Request Handler'
 
 
 class RequestHandler(Process):
 
-    def __init__(self, i, server_socket, code, db_info, max_req):
+    def __init__(self, i, server_socket, code, db_info, max_req, log_queue):
 
         super(RequestHandler, self).__init__()
 
@@ -23,13 +28,14 @@ class RequestHandler(Process):
         self.pending_req_queue = multiprocessing.Queue(maxsize=int(self.max_req))
         self.db_ip = db_info[0]
         self.db_port = db_info[1]
-        self.response_handler = ResponseHandler(i, self.code, self.pending_req_queue)
-
-        print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Init')
+        self.log_queue = log_queue
+        self.response_handler = ResponseHandler(i, self.code, self.pending_req_queue, log_queue)
 
     def run(self):
 
-        print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Started')
+        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                          'Started', dt.datetime.now().strftime(
+                '%Y/%m/%d %H:%M:%S.%f'), ''))
 
         # Start the response handler thread
         self.response_handler.start()
@@ -46,39 +52,53 @@ class RequestHandler(Process):
 
                 # Receive the http package
                 request = c_sock.recv(4096)
-                print("request : " + str(request))
 
-                # If the the right one ok
-                if HttpParser.check_correct_service(request, self.code, '/log'):
+                # If the the service is the right one
+                correct_service = HttpParser.check_correct_service(request, self.code, '/log')
 
+                # TO DO: check if the request is valid
+
+                res_error = HttpParser.generate_response('503 Service Unavailable', '')
+
+                if correct_service:
                     # check if the queue is full first
                     # if not send to db server
-                    db_sock = ClientSocket()
-                    db_sock.connect(self.db_ip, self.db_port)
-                    db_msg = HttpParser.parse(self.code, request)
-                    print("db_msg: " + db_msg)
-                    db_sock.send(str(len(db_msg)).zfill(8))
-                    db_sock.send(db_msg)
+                    try:
+                        # connect with db and send request
+                        db_sock = ClientSocket()
+                        db_sock.connect(self.db_ip, self.db_port)
+                        db_msg = HttpParser.parse(self.code, request)
+                        db_sock.send(str(len(db_msg)).zfill(8))
+                        db_sock.send(db_msg)
 
-                    self.pending_req_queue.put([c_sock, db_sock])
+                        self.pending_req_queue.put([c_sock, db_sock])
 
-                    print(str(self.code) + " Response Handler: " + str(self.worker_id) + ' - Data: ' +
-                          str(HttpParser.parse(self.code, request)))
+                    except ConnectionRefusedError:
+                        # if error in sending request to db
+                        # return error msg to client
+                        c_sock.send(res_error)
+                        c_sock.close()
+
                 else:
+                    # if request was not valid
+                    # return error msg to client
+                    c_sock.send(res_error)
                     c_sock.close()
-                    print(str(self.code) + " Response Handler: " + str(self.worker_id) + ' - Wrong request: ')
-
-            print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Finished')
 
         except KeyboardInterrupt:
             self.end = True
-            print(str(self.code) + ' Handler process: ' + str(self.worker_id) + ' - Interrupted')
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                              'Interrupted', dt.datetime.now().strftime(
+                                              '%Y/%m/%d %H:%M:%S.%f'), ''))
 
         finally:
             # Send message to end the thread and close the accepting socket
             self.pending_req_queue.put("end")
             self.sock.close()
             self.response_handler.join()
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                              'Finished', dt.datetime.now().strftime(
+                                              '%Y/%m/%d %H:%M:%S.%f'), ''))
 
 
 

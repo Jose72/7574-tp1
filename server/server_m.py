@@ -2,16 +2,19 @@ from multiprocessing import Process, Queue
 from utils.socket import ServerSocket
 from server.request_handler import RequestHandler
 from server.response_handler import ResponseHandler
-from pprint import pprint
+from utils.logger import create_log_msg
+import datetime as dt
+import os
+from time import sleep
+
+P_NAME = 'Server'
 
 
 class Server(Process):
 
-    def __init__(self, config_info, code):
+    def __init__(self, config_info, code, log_queue):
 
         super(Server, self).__init__()
-
-        pprint(config_info)
 
         self.ip_address = config_info['ip_address']
         self.port = config_info['port']
@@ -24,32 +27,39 @@ class Server(Process):
         self.db_ip = config_info['db_ip']
         self.db_port = config_info['db_port']
         self.max_requests = config_info['max_requests']
+        self.log_queue = log_queue
 
         self.end = False
-        print(str(self.code) + ' Server: Init')
 
     def run(self):
 
         try:
-            print(str(self.code) + ' Server: Running')
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                              'Started', dt.datetime.now().strftime(
+                                              '%Y/%m/%d %H:%M:%S.%f'), ''))
 
             # Create request workers
             for i in range(0, self.workers_n):
-                w = RequestHandler(i, self.sock, self.code, (self.db_ip, self.db_port), (self.max_requests / self.workers_n))
+                w = RequestHandler(i, self.sock, self.code, (self.db_ip, self.db_port),
+                                   (self.max_requests / self.workers_n),
+                                   self.log_queue)
                 self.request_process_pool.append(w)
                 w.start()
 
-            # Wait for workers to finish
-            for i in range(0, self.workers_n):
-                self.request_process_pool[i].join()
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                              'Started', dt.datetime.now().strftime(
+                                              '%Y/%m/%d %H:%M:%S.%f'),
+                                              'All workers created'))
 
-            # Close the socket
-            self.sock.close()
+            while True:
+                sleep(2)
 
         except KeyboardInterrupt:
 
             self.end = True
-            print(str(self.code) + ' Server: Interrupted')
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                              'Interrupted', dt.datetime.now().strftime(
+                                              '%Y/%m/%d %H:%M:%S.%f'), ''))
 
         finally:
 
@@ -60,4 +70,7 @@ class Server(Process):
             # Close the socket
             self.sock.close()
 
-            print(str(self.code) + ' Server: Exiting')
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                              'Finished', dt.datetime.now().strftime(
+                                              '%Y/%m/%d %H:%M:%S.%f'), ''))
+            self.log_queue.put("end")

@@ -1,12 +1,7 @@
-
 from email.utils import formatdate
-from urllib.parse import urlparse, parse_qs
-import json
 
 
 NEW_LINE = '\n'
-OK_CODE = '200 OK'
-SERVER_ERROR_CODE = '503 SERVER ERROR'
 
 
 class HttpParser:
@@ -16,9 +11,6 @@ class HttpParser:
         f_line = request.split('\n',1)[0]
         p = f_line.split(' ')
         p_url = p[1].split('?')[0]
-        print(p_url)
-        print(url)
-        print(petition)
         return (p[0] == petition) & (p_url == url)
 
     @staticmethod

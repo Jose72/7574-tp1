@@ -1,49 +1,68 @@
-from multiprocessing import Process
 from utils.parser import HttpParser
 from threading import Thread
-import signal
 import socket
+import datetime as dt
+import time
+import os
+from utils.logger import create_log_msg
+
+P_NAME = 'Response Handler'
 
 
 class ResponseHandler(Thread):
-    def __init__(self, i, code, pending_req_queue):
+    def __init__(self, i, code, pending_req_queue, log_queue):
         super(ResponseHandler, self).__init__()
 
         self.worker_id = i
         self.code = code
         self.queue = pending_req_queue
         self.end = False
+        self.log_queue = log_queue
 
     def run(self):
 
-        print(str(self.code) + " Response Handler: " + str(self.worker_id) + " - Started")
+        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                          'Started', dt.datetime.now().strftime(
+                                          '%Y/%m/%d %H:%M:%S.%f'), ''))
 
         while not self.end:
 
             p = self.queue.get()
 
             if p == "end":
-                print(str(self.code) + " Response Handler: " + str(self.worker_id) + " - Finished")
-                return
+                self.end = True
+                continue
 
             c_sock = p[0]
             db_sock = p[1]
 
-            print(str(self.code) + " Response Handler: " + str(self.worker_id) + " - New response from DB")
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                              'Running', dt.datetime.now().strftime(
+                                              '%Y/%m/%d %H:%M:%S.%f'),
+                                              'New Response from DB'))
 
             try:
                 r_size = db_sock.recv_f(8)
                 result = db_sock.recv_f(int(r_size))
 
                 result = HttpParser.generate_response('200 OK', result)
-                #print(str(self.code) + " Response Handler: " + str(self.worker_id) + ' - Data: \n' + str(result))
                 c_sock.send(result)
-                print(str(self.code) + " Response Handler: " + str(self.worker_id) + " - Response sent to client")
+
+                self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                                  'Running', dt.datetime.now().strftime(
+                                                  '%Y/%m/%d %H:%M:%S.%f'),
+                                                  'Response sent to client'))
 
             finally:
+
                 if db_sock:
                     db_sock.shutdown(socket.SHUT_RDWR)
                     db_sock.close()
+
                 if c_sock:
                     c_sock.shutdown(socket.SHUT_RDWR)
                     c_sock.close()
+
+        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                          'Finished', dt.datetime.now().strftime(
+                '%Y/%m/%d %H:%M:%S.%f'), ''))
