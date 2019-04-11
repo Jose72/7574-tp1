@@ -31,7 +31,7 @@ class DBProcessRequest:
 
         json_queries = json.loads(queries)
 
-        fieldnames = ['logTags', 'message', 'timestamp']
+        fieldnames = ['AppId', 'logTags', 'message', 'timestamp']
 
         q_app_id = json_queries['AppId']
         q_tags = json_queries['logTags']
@@ -49,17 +49,15 @@ class DBProcessRequest:
 
         return result
 
-    def process_post(self, logs):
+    def process_post(self, log):
 
-        json_logs = (json.loads(logs))['logs']
+        log = (json.loads(log))
 
-        fieldnames = ['logTags', 'message', 'timestamp']
+        fieldnames = ['AppId', 'logTags', 'message', 'timestamp']
 
-        for e in json_logs:
-            log_app_id = e['AppId']
-            del e['AppId']
-            w_file = self.file_manager.get_file_to_write(log_app_id)
-            w_file.write_log(e, fieldnames)
+        log_app_id = log['AppId']
+        w_file = self.file_manager.get_file_to_write(log_app_id)
+        w_file.write_log(log, fieldnames)
 
         return '200 OK'
 
