@@ -41,6 +41,8 @@ class DBProcessRequest:
 
         files = self.file_manager.get_files_to_read(q_app_id)
 
+        # print(len(files))
+
         for f in files:
             result += f.read_logs(fieldnames, q_tags, q_date_from, q_date_to, q_pattern)
 
@@ -51,6 +53,7 @@ class DBProcessRequest:
 
     def process_post(self, log):
 
+        #print(type(log))
         log = (json.loads(log))
 
         fieldnames = ['AppId', 'logTags', 'message', 'timestamp']

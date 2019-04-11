@@ -2,13 +2,10 @@ from utils.parser import HttpParser
 from utils.socket import ClientSocket, ServerSocket
 from multiprocessing import Process
 from server.response_handler import ResponseHandler
-from threading import Thread
 import multiprocessing
-import signal
 import socket
 import datetime as dt
 import os
-import time
 from utils.logger import create_log_msg
 
 P_NAME = 'Request Handler'
@@ -53,13 +50,14 @@ class RequestHandler(Process):
                 # Receive the http package
                 request = c_sock.recv(4096)
 
+                self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                                  'Running', dt.datetime.now().strftime(
+                        '%Y/%m/%d %H:%M:%S.%f'), 'Request Received - client:' + str(addr)))
+
                 # If the the service is the right one (its a get/post and correct url)
                 correct_service = HttpParser.check_correct_service(request, self.code, '/log')
 
                 # TO DO: check if the request is valid (right format, valid json fields, etc)
-
-                # set an error response for later
-                res_error = HttpParser.generate_response('503 Service Unavailable', '')
 
                 # if correct service and queue is not full
                 # send to db server
@@ -78,13 +76,22 @@ class RequestHandler(Process):
                     except ConnectionRefusedError:
                         # if error in sending request to db
                         # return error msg to client
+                        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                                          'Running', dt.datetime.now().strftime(
+                                '%Y/%m/%d %H:%M:%S.%f'), 'Service Unavailable - client:' + str(addr)))
+                        res_error = HttpParser.generate_response('503 Service Unavailable', '')
                         c_sock.send(res_error)
                         c_sock.close()
 
                 else:
                     # if request was not valid
                     # return error msg to client
+                    self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                                      'Running', dt.datetime.now().strftime(
+                            '%Y/%m/%d %H:%M:%S.%f'), 'Bad Request - client:' + str(addr)))
+                    res_error = HttpParser.generate_response('400 Bad Request', '')
                     c_sock.send(res_error)
+                    c_sock.shutdown(socket.SHUT_RDWR)
                     c_sock.close()
 
         except KeyboardInterrupt:
@@ -101,7 +108,3 @@ class RequestHandler(Process):
             self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
                                               'Finished', dt.datetime.now().strftime(
                                               '%Y/%m/%d %H:%M:%S.%f'), ''))
-
-
-
-
