@@ -1,4 +1,4 @@
-from multiprocessing import Process, Lock
+from multiprocessing import Process
 from utils.socket import ServerSocket
 from database.db_request_handler import DBRequestHandler
 from database.file_manager import FileManager
@@ -6,6 +6,7 @@ from utils.logger import create_log_msg
 import datetime as dt
 from time import sleep
 import os
+import socket
 
 P_NAME = 'DB Server'
 
@@ -74,6 +75,9 @@ class DBServer(Process):
             self.end = True
 
         finally:
+            self.sock_get.shutdown(socket.SHUT_RDWR)
+            self.sock_post.shutdown(socket.SHUT_RDWR)
+
             # Wait for workers to finish
             for p in self.process_pool_post:
                 p.join()

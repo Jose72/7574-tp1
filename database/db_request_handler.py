@@ -39,7 +39,6 @@ class DBRequestHandler(Thread):
             while not self.end:
 
                 (c_fd, addr) = self.sock.accept()
-
                 c_sock = ServerSocket()
                 c_sock.move_from(c_fd)
 
@@ -75,12 +74,11 @@ class DBRequestHandler(Thread):
 
         except KeyboardInterrupt:
             self.end = True
-
+        except socket.error:
+            self.end = True
         finally:
             self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
                                               'Finished', dt.datetime.now().strftime(
                     '%Y/%m/%d %H:%M:%S.%f'), ''))
             self.sock.close()
 
-    def finish(self):
-        self.end = True
