@@ -16,7 +16,7 @@ class Socket:
         while len(r) < m_size:
             part = self.socket.recv(m_size - len(r))
             if not part:
-                return ''
+                raise socket.error
             r = r + part.decode('utf-8')
         return r
 

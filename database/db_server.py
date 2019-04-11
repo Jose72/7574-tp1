@@ -2,12 +2,17 @@ from multiprocessing import Process, Lock
 from utils.socket import ServerSocket
 from database.db_request_handler import DBRequestHandler
 from database.file_manager import FileManager
-import sys
+from utils.logger import create_log_msg
+import datetime as dt
+from time import sleep
+import os
+
+P_NAME = 'DB Server'
 
 
 class DBServer(Process):
 
-    def __init__(self, config_info):
+    def __init__(self, config_info, log_queue):
 
         super(DBServer, self).__init__()
 
@@ -26,56 +31,59 @@ class DBServer(Process):
         self.sock_get = ServerSocket()
         self.sock_get.init(self.ip_address, self.port_get, self.max_con)
         self.file_manager = FileManager(self.file_folder, self.shard_size)
-
-        self.end = False  # end the process
-        print('DB Server: Init')
+        self.log_queue = log_queue
+        self.end = False
 
     def run(self):
 
         try:
-            print('DB Server: Running')
-
-            lock = Lock()
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, 'POST/GET',
+                                              'Started', dt.datetime.now().strftime(
+                                              '%Y/%m/%d %H:%M:%S.%f'), ''))
 
             # Create post workers
             for i in range(0, self.workers_post):
-                w = DBRequestHandler(i, self.sock_post, 'POST', lock, self.shard_size,
-                                     self.file_folder, self.file_manager)
+                w = DBRequestHandler(i, self.sock_post, 'POST', self.shard_size,
+                                     self.file_folder, self.file_manager, self.log_queue)
                 self.process_pool_post.append(w)
                 w.start()
+
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, 'POST/GET',
+                                              'Running', dt.datetime.now().strftime(
+                                              '%Y/%m/%d %H:%M:%S.%f'),
+                                              'All POST workers started'))
                 
             # Create get workers
             for i in range(0, self.workers_get):
-                w = DBRequestHandler(i, self.sock_get, 'GET', lock, self.shard_size,
-                                     self.file_folder, self.file_manager)
+                w = DBRequestHandler(i, self.sock_get, 'GET', self.shard_size,
+                                     self.file_folder, self.file_manager, self.log_queue)
                 self.process_pool_get.append(w)
                 w.start()
 
-            for p in self.process_pool_post:
-                p.join()
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, 'POST/GET',
+                                              'Running', dt.datetime.now().strftime(
+                                              '%Y/%m/%d %H:%M:%S.%f'),
+                                              'All GET workers started'))
 
-            for p in self.process_pool_get:
-                p.join()
-
-            # Close the socket
-            self.sock_post.close()
-            self.sock_get.close()
-
-            print('DB Server: Exiting')
+            while True:
+                sleep(60)
 
         except KeyboardInterrupt:
             self.end = True
-            print('DB Server: Interrupted')
+
+        finally:
             # Wait for workers to finish
             for p in self.process_pool_post:
-                p.finish()
                 p.join()
 
             for p in self.process_pool_get:
-                p.finish()
                 p.join()
 
-            # Close the socket
+            # Close the sockets
             self.sock_post.close()
             self.sock_get.close()
-            print('DB Server: Finishing Interrupt')
+
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, 'POST/GET',
+                                              'Finished', dt.datetime.now().strftime(
+                                              '%Y/%m/%d %H:%M:%S.%f'), ''))
+

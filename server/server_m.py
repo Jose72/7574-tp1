@@ -52,7 +52,7 @@ class Server(Process):
                                               'All workers created'))
 
             while True:
-                sleep(2)
+                sleep(60)
 
         except KeyboardInterrupt:
 
@@ -73,4 +73,3 @@ class Server(Process):
             self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
                                               'Finished', dt.datetime.now().strftime(
                                               '%Y/%m/%d %H:%M:%S.%f'), ''))
-            self.log_queue.put("end")

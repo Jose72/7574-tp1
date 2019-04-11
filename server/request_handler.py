@@ -53,16 +53,18 @@ class RequestHandler(Process):
                 # Receive the http package
                 request = c_sock.recv(4096)
 
-                # If the the service is the right one
+                # If the the service is the right one (its a get/post and correct url)
                 correct_service = HttpParser.check_correct_service(request, self.code, '/log')
 
-                # TO DO: check if the request is valid
+                # TO DO: check if the request is valid (right format, valid json fields, etc)
 
+                # set an error response for later
                 res_error = HttpParser.generate_response('503 Service Unavailable', '')
 
-                if correct_service:
-                    # check if the queue is full first
-                    # if not send to db server
+                # if correct service and queue is not full
+                # send to db server
+                if correct_service and not self.pending_req_queue.full():
+
                     try:
                         # connect with db and send request
                         db_sock = ClientSocket()

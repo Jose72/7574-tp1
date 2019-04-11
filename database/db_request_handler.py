@@ -4,12 +4,16 @@ from multiprocessing import Queue, Process
 from database.processing import DBProcessRequest
 from utils.parser import numb_to_str_with_zeros
 from utils.socket import ServerSocket
-import sys
+from utils.logger import create_log_msg
+import datetime as dt
+import os
+
+P_NAME = 'DB Request Handler'
 
 
 class DBRequestHandler(Process):
 
-    def __init__(self, i, server_socket, code, lock, shard_size, file_folder, file_manager):
+    def __init__(self, i, server_socket, code, shard_size, file_folder, file_manager, log_queue):
 
         super(DBRequestHandler, self).__init__()
 
@@ -17,44 +21,63 @@ class DBRequestHandler(Process):
         self.sock = server_socket
         self.code = code
         self.end = False
-        self.lock = lock
         self.shard_size = shard_size
         self.file_folder = file_folder
         self.file_manager = file_manager
-
-        print(str(self.code) + ' DB Handler process: ' + str(self.worker_id) + ' - Init')
+        self.log_queue = log_queue
 
     def run(self):
 
         try:
 
-            print(str(self.code) + ' DB Handler process: ' + str(self.worker_id) + ' - Started')
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                              'Started', dt.datetime.now().strftime(
+                    '%Y/%m/%d %H:%M:%S.%f'), ''))
 
             while not self.end:
+
                 (c_fd, addr) = self.sock.accept()
 
                 c_sock = ServerSocket()
                 c_sock.move_from(c_fd)
 
-                m_size = c_sock.recv_f(8)
-                request = c_sock.recv_f(int(m_size))
+                try:
+                    # receive request from client
+                    m_size = c_sock.recv_f(8)
+                    request = c_sock.recv_f(int(m_size))
 
-                print(str(self.code) + ' DB Handler process: ' + str(self.worker_id) + ' - Request received')
+                    self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                                      'Request received', dt.datetime.now().strftime(
+                            '%Y/%m/%d %H:%M:%S.%f'), 'client_address: ' + str(addr)))
 
-                processor = DBProcessRequest(self.file_folder, self.shard_size, self.file_manager)
-                res = processor.process(self.code, request)
+                    # process request
+                    processor = DBProcessRequest(self.file_folder, self.shard_size, self.file_manager)
+                    res = processor.process(self.code, request)
 
-                c_sock.send(str(len(res)).zfill(8))
-                c_sock.send(res)
+                    # send response to client
+                    c_sock.send(str(len(res)).zfill(8))
+                    c_sock.send(res)
 
-                print(str(self.code) + ' DB Handler process: ' + str(self.worker_id) + ' - Response sent')
+                    self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                                      'Response sent', dt.datetime.now().strftime(
+                            '%Y/%m/%d %H:%M:%S.%f'), 'client_address: ' + str(addr)))
 
-            # Close socket
-            self.sock.close()
-            print(str(self.code) + ' DB Handler process: ' + str(self.worker_id) + ' - Finished')
+                except socket.error:
+
+                    self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                                      'Connection lost', dt.datetime.now().strftime(
+                            '%Y/%m/%d %H:%M:%S.%f'), 'client_ip: ' + str(addr)))
+
+                finally:
+                    c_sock.close()
 
         except KeyboardInterrupt:
-            print(str(self.code) + ' DB Handler process: ' + str(self.worker_id) + ' - Interrupted')
+            self.end = True
+
+        finally:
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                              'Finished', dt.datetime.now().strftime(
+                    '%Y/%m/%d %H:%M:%S.%f'), ''))
             self.sock.close()
 
     def finish(self):
