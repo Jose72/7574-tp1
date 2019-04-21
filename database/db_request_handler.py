@@ -5,7 +5,7 @@ from threading import Thread
 from multiprocessing import Queue, Process
 from database.processing import DBProcessRequest
 from utils.parser import numb_to_str_with_zeros
-from utils.socket import ServerSocket
+from utils.socket import ServerSocket, Socket
 from utils.logger import create_log_msg
 import datetime as dt
 import os
@@ -22,7 +22,6 @@ class DBRequestHandler(Thread):
         self.worker_id = i
         self.sock = server_socket
         self.code = code
-        self.end = False
         self.shard_size = shard_size
         self.file_folder = file_folder
         self.file_manager = file_manager
@@ -36,10 +35,10 @@ class DBRequestHandler(Thread):
                                               'Started', dt.datetime.now().strftime(
                     '%Y/%m/%d %H:%M:%S.%f'), ''))
 
-            while not self.end:
+            while True:
 
                 (c_fd, addr) = self.sock.accept()
-                c_sock = ServerSocket()
+                c_sock = Socket()
                 c_sock.move_from(c_fd)
 
                 try:
@@ -73,9 +72,9 @@ class DBRequestHandler(Thread):
                     c_sock.close()
 
         except KeyboardInterrupt:
-            self.end = True
+            pass
         except socket.error:
-            self.end = True
+            pass
         finally:
             self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
                                               'Finished', dt.datetime.now().strftime(

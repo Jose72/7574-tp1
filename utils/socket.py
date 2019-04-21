@@ -33,10 +33,8 @@ class Socket:
 
 class ServerSocket(Socket):
 
-    def __init__(self):
+    def __init__(self, addr, port, max_con):
         super(ServerSocket, self).__init__()
-
-    def init(self, addr, port, max_con):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((addr, port))

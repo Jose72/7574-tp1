@@ -22,8 +22,7 @@ class Server(Process):
         self.workers_n = config_info['workers_n']
         self.code = code
         self.request_process_pool = []
-        self.sock = ServerSocket()
-        self.sock.init(self.ip_address, self.port, self.max_con)
+        self.sock = ServerSocket(self.ip_address, self.port, self.max_con)
         self.db_ip = config_info['db_ip']
         self.db_port = config_info['db_port']
         self.max_requests = config_info['max_requests']

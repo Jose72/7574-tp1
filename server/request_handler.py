@@ -1,5 +1,5 @@
 from utils.parser import HttpParser
-from utils.socket import ClientSocket, ServerSocket
+from utils.socket import ClientSocket, Socket
 from multiprocessing import Process
 from server.response_handler import ResponseHandler
 import multiprocessing
@@ -20,7 +20,6 @@ class RequestHandler(Process):
         self.worker_id = i
         self.sock = server_socket
         self.code = code
-        self.end = False
         self.max_req = max_req
         self.pending_req_queue = multiprocessing.Queue(maxsize=int(self.max_req))
         self.db_ip = db_info[0]
@@ -39,12 +38,12 @@ class RequestHandler(Process):
 
         try:
 
-            while not self.end:
+            while True:
 
                 # Accept a new connection
                 (c_fd, addr) = self.sock.accept()
 
-                c_sock = ServerSocket()
+                c_sock = Socket()
                 c_sock.move_from(c_fd)
 
                 # Receive the http package
@@ -95,7 +94,6 @@ class RequestHandler(Process):
                     c_sock.close()
 
         except KeyboardInterrupt:
-            self.end = True
             self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
                                               'Interrupted', dt.datetime.now().strftime(
                                               '%Y/%m/%d %H:%M:%S.%f'), ''))

@@ -32,9 +32,8 @@ class File:
                 reader = csv.DictReader(cf, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL,
                                         fieldnames=fieldnames)
 
-                for e in reader:
-
-                    e = json.loads(json.dumps(e))
+                for chunk in gen_chuncks(reader):
+                    e = json.loads(json.dumps(chunk))
 
                     cond_tags = True
                     cond_date = True
@@ -50,19 +49,19 @@ class File:
                     # Check correct date
                     if q_date_from:
                         cond_date = cond_date & (dt.datetime.strptime(q_date_from, '%Y/%m/%d %H:%M:%S.%f') <=
-                                     dt.datetime.strptime(l_date, '%Y/%m/%d %H:%M:%S.%f'))
+                                                 dt.datetime.strptime(l_date, '%Y/%m/%d %H:%M:%S.%f'))
 
                     if q_date_to:
                         cond_date = cond_date & (dt.datetime.strptime(q_date_to, '%Y/%m/%d %H:%M:%S.%f') >=
-                                     dt.datetime.strptime(l_date, '%Y/%m/%d %H:%M:%S.%f'))
+                                                 dt.datetime.strptime(l_date, '%Y/%m/%d %H:%M:%S.%f'))
 
                     cond_pattern = (q_pattern in l_message)
 
-                    #print("tags: " + str(cond_tags) + " date: " + str(cond_date) + "pattern: " + str(cond_pattern))
+                    # print("tags: " + str(cond_tags) + " date: " + str(cond_date) + "pattern: " + str(cond_pattern))
 
                     if cond_tags & cond_date & cond_pattern:
                         result.append(e)
-                        #print("partial: " + str(result))
+                        # print("partial: " + str(result))
 
             cf.close()
             return result
@@ -91,3 +90,8 @@ class File:
         x = (self.file_path.split('/'))[-1]
         x = (x.split(UNDERSCORE))[1]
         return (numb_to_str_with_zeros(f_id, DIGITS_FOR_FILE_ID)) == x
+
+
+def gen_chuncks(reader):
+    for row in reader:
+        yield row

@@ -29,10 +29,8 @@ class DBServer(Process):
         self.process_pool_post = []
         self.process_pool_get = []
         self.shard_size = config_info['shard_size']
-        self.sock_post = ServerSocket()
-        self.sock_post.init(self.ip_address, self.port_post, self.max_con)
-        self.sock_get = ServerSocket()
-        self.sock_get.init(self.ip_address, self.port_get, self.max_con)
+        self.sock_post = ServerSocket(self.ip_address, self.port_post, self.max_con)
+        self.sock_get = ServerSocket(self.ip_address, self.port_get, self.max_con)
         self.file_manager = FileManager(self.file_folder, self.shard_size)
         self.log_queue = log_queue
         self.end = False
