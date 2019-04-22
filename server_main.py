@@ -1,9 +1,8 @@
-import os
 import json
+import signal
 from server.server_m import Server
 from utils.logger import Logger
 from multiprocessing import Queue
-from time import sleep
 
 
 def main():
@@ -21,7 +20,7 @@ def main():
 
     try:
         while True:
-            sleep(60)
+            signal.pause()
 
     except KeyboardInterrupt:
         post_server.join()
@@ -32,5 +31,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

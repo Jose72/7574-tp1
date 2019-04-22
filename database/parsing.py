@@ -11,10 +11,7 @@ FILE_EXTENSION = '.csv'
 
 def numb_to_str_with_zeros(num, digits):
     n = str(num)
-    z = 0
-    if len(n) < digits:
-        z = digits - len(n)
-    return n.zfill(z)
+    return n.zfill(digits)
 
 
 def last_file(files):

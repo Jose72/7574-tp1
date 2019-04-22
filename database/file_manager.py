@@ -1,13 +1,9 @@
 from multiprocessing import Lock
-from database.parsing import numb_to_str_with_zeros
-import json
-import datetime
 import os
 from os import listdir
 from os.path import isfile, join
-import csv
 from database.file import File
-from database.parsing import numb_to_str_with_zeros, create_new_file_name, get_list, last_file
+from database.parsing import numb_to_str_with_zeros, create_new_file_name, last_file
 
 FILE_NAME_START = 'log'
 UNDERSCORE = '_'
@@ -28,7 +24,7 @@ class FileManager:
         files = get_file_names_in_dir(self.log_dir)
 
         for f in files:
-            self.files.append(File(self.log_dir + f))
+            self.files.append(File(self.log_dir + f, self.shard_size))
 
     def get_file(self, f_name):
         for f in self.files:
@@ -39,7 +35,7 @@ class FileManager:
     def get_file_or_append(self, f_name):
         f = self.get_file(f_name)
         if not f:
-            f = File(self.log_dir + f_name)
+            f = File(self.log_dir + f_name, self.shard_size)
             self.files.append(f)
         return f
 
@@ -87,7 +83,7 @@ class FileManager:
                 return self.get_file_or_append(last_f)
 
             # if not create the new one and return it
-            w_file = File(self.log_dir + last_f)
+            w_file = File(self.log_dir + last_f, self.shard_size)
             self.files.append(w_file)
             return w_file
 
@@ -98,7 +94,7 @@ class FileManager:
         self.lock.acquire()
 
         try:
-            #files = self.get_file_names_by_id(log_app_id)
+            # files = self.get_file_names_by_id(log_app_id)
             files = [f for f in self.files if f.is_id(log_app_id)]
             return files
 

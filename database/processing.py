@@ -49,13 +49,14 @@ class DBProcessRequest:
 
     def process_post(self, log):
 
-        #print(type(log))
+        # print(type(log))
         log = (json.loads(log))
 
         fieldnames = ['AppId', 'logTags', 'message', 'timestamp']
 
         log_app_id = log['AppId']
         w_file = self.file_manager.get_file_to_write(log_app_id)
+
         w_file.write_log(log, fieldnames)
 
         return '200 OK'

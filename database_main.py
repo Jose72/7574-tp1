@@ -1,7 +1,5 @@
-import os
-import sys
 import json
-from time import sleep
+import signal
 from multiprocessing import Queue
 from database.db_server import DBServer
 from utils.logger import Logger
@@ -18,7 +16,7 @@ def main():
 
     try:
         while True:
-            sleep(60)
+            signal.pause()
 
     except KeyboardInterrupt:
         db_server.join()
