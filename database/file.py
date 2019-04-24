@@ -11,6 +11,7 @@ FILE_EXTENSION = '.csv'
 
 DIGITS_FOR_FILE_NUMBER = 8
 DIGITS_FOR_FILE_ID = 8
+LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
 
 class File:
@@ -51,12 +52,12 @@ class File:
 
                 # Check correct date
                 if q_date_from:
-                    cond_date = cond_date & (dt.datetime.strptime(q_date_from, '%Y/%m/%d %H:%M:%S.%f') <=
-                                             dt.datetime.strptime(l_date, '%Y/%m/%d %H:%M:%S.%f'))
+                    cond_date = cond_date & (dt.datetime.strptime(q_date_from, LOG_DATE_FORMAT) <=
+                                             dt.datetime.strptime(l_date, LOG_DATE_FORMAT))
 
                 if q_date_to:
-                    cond_date = cond_date & (dt.datetime.strptime(q_date_to, '%Y/%m/%d %H:%M:%S.%f') >=
-                                             dt.datetime.strptime(l_date, '%Y/%m/%d %H:%M:%S.%f'))
+                    cond_date = cond_date & (dt.datetime.strptime(q_date_to, LOG_DATE_FORMAT) >=
+                                             dt.datetime.strptime(l_date, LOG_DATE_FORMAT))
 
                 cond_pattern = (q_pattern in l_message)
 
@@ -94,6 +95,23 @@ class File:
         x = (self.file_path.split('/'))[-1]
         x = (x.split(UNDERSCORE))[1]
         return (numb_to_str_with_zeros(f_id, DIGITS_FOR_FILE_ID)) == x
+
+    def is_date(self, d_from, d_to):
+        x = (self.file_path.split('/'))[-1]
+        x = (x.split(UNDERSCORE))[2]
+        date = dt.datetime.strptime(x, '%Y-%m-%d')
+        cond_from = True
+        cond_to = True
+        if d_from:
+            cond_from = date >= dt.datetime.strptime(dt.datetime.strptime(
+                d_from, LOG_DATE_FORMAT).strftime('%Y-%m-%d'), '%Y-%m-%d')
+        if d_to:
+            cond_to = date <= dt.datetime.strptime(dt.datetime.strptime(
+                d_to, LOG_DATE_FORMAT).strftime('%Y-%m-%d'), '%Y-%m-%d')
+        return cond_from & cond_to
+
+    def get_file_name(self):
+        return self.file_path.split('/')[-1]
 
 
 def gen_chuncks(reader):

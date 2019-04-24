@@ -54,13 +54,13 @@ class FileManager:
 
         return files
 
-    def get_file_to_write(self, log_app_id):
+    def get_file_to_write(self, log_app_id, log_timestamp):
         self.lock.acquire()
 
         try:
 
             # get the file names with correct id
-            files = self.get_file_names_by_id(log_app_id)
+            files = self.get_file_names(log_app_id, log_timestamp)
 
             search_f = False
 
@@ -69,11 +69,11 @@ class FileManager:
             # then creating a new one its needed
             last_f = last_file(files)
             if not last_f:
-                last_f = create_new_file_name(last_f, log_app_id)
+                last_f = create_new_file_name(last_f, log_app_id, log_timestamp)
             else:
                 f_size = os.path.getsize(self.log_dir + last_f)
                 if f_size >= self.shard_size:
-                    last_f = create_new_file_name(last_f, log_app_id)
+                    last_f = create_new_file_name(last_f, log_app_id, log_timestamp)
                 else:
                     search_f = True
 
@@ -90,17 +90,22 @@ class FileManager:
         finally:
             self.lock.release()
 
-    def get_files_to_read(self, log_app_id):
+    def get_files_to_read(self, log_app_id, log_from, log_to):
         self.lock.acquire()
 
         try:
             # files = self.get_file_names_by_id(log_app_id)
             files = [f for f in self.files if f.is_id(log_app_id)]
+            files = [f for f in files if f.is_date(log_from, log_to)]
             return files
 
         finally:
             self.lock.release()
 
+    def get_file_names(self, log_app_id, log_timestamp):
+        files = [f for f in self.files if f.is_id(log_app_id)]
+        files = [f for f in files if f.is_date(log_timestamp, log_timestamp)]
+        return [f.get_file_name() for f in files]
 
 def get_file_names_in_dir(dir_path):
     files = [f for f in listdir(dir_path) if isfile(join(dir_path, f))]
@@ -110,3 +115,4 @@ def get_file_names_in_dir(dir_path):
         files = [f for f in files if FILE_EXTENSION in f]
 
     return files
+

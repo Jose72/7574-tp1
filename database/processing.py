@@ -35,9 +35,7 @@ class DBProcessRequest:
         q_date_to = json_queries['To']
         q_pattern = json_queries['pattern']
 
-        files = self.file_manager.get_files_to_read(q_app_id)
-
-        #print(len(files))
+        files = self.file_manager.get_files_to_read(q_app_id, q_date_from, q_date_to)
 
         for f in files:
             result += f.read_logs(fieldnames, q_tags, q_date_from, q_date_to, q_pattern)
@@ -55,7 +53,8 @@ class DBProcessRequest:
         fieldnames = ['AppId', 'logTags', 'message', 'timestamp']
 
         log_app_id = log['AppId']
-        w_file = self.file_manager.get_file_to_write(log_app_id)
+        log_timestamp = log['timestamp']
+        w_file = self.file_manager.get_file_to_write(log_app_id, log_timestamp)
 
         w_file.write_log(log, fieldnames)
 

@@ -4,12 +4,14 @@ from test.generator import generate_post_request, generate_get_request
 import json
 from os.path import isfile, join
 from os import listdir
+import datetime as dt
+from database.parsing import numb_to_str_with_zeros
 
 NEW_LINE = '\n'
-GETS_TO_SEND_PER_PROCESS = 10
-POSTS_TO_SEND_PER_PROCESS = 200
+GETS_TO_SEND_PER_PROCESS = 100
+POSTS_TO_SEND_PER_PROCESS = 400
 GET_PROCESSES = 0
-POST_PROCESSES = 2
+POST_PROCESSES = 5
 
 
 def main():
@@ -20,6 +22,9 @@ def main():
         p.append(wp)
         wp.start()
 
+    t1 = dt.datetime.now()
+    print(t1)
+
     for i in range(0, GET_PROCESSES):
         wg = GetSender()
         p.append(wg)
@@ -27,6 +32,9 @@ def main():
 
     for s in p:
         s.join()
+
+    t2 = dt.datetime.now()
+    print(t2)
     return 0
 
 
@@ -47,7 +55,7 @@ class PostSender(Process):
                 'Content - Length: ' + str(len(payload)) + NEW_LINE + \
                 'Content-Type: ' + 'application/json' + NEW_LINE + \
                 payload + NEW_LINE
-            #print(r)
+            # print(r)
             socket.connect('localhost', 6060)
             socket.send(str(r))
             res = socket.recv(1024)
@@ -70,7 +78,7 @@ class GetSender(Process):
                 'Content - Length: ' + str(len(payload)) + NEW_LINE + \
                 'Content-Type: ' + 'application/json' + NEW_LINE + \
                 payload + NEW_LINE
-            #print(r)
+            # print(r)
             socket.connect('localhost', 6070)
             socket.send(str(r))
             res = socket.recv(1024)
