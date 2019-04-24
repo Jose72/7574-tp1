@@ -1,0 +1,7 @@
+FROM python:3.5-alpine
+
+WORKDIR /7574-tp1
+
+COPY . /7574-tp1
+
+CMD python3 /7574-tp1/server_post_main.py

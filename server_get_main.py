@@ -8,14 +8,10 @@ from multiprocessing import Queue
 def main():
     with open('./config_get.json') as f:
         config_info_get = json.load(f)
-    with open('./config_post.json') as f:
-        config_info_post = json.load(f)
     log_queue = Queue()
-    logger = Logger('./server_log.txt', log_queue)
+    logger = Logger('./server_get_log.txt', log_queue)
     get_server = Server(config_info_get, 'GET', log_queue)
-    post_server = Server(config_info_post, 'POST', log_queue)
     logger.start()
-    post_server.start()
     get_server.start()
 
     try:
@@ -23,7 +19,6 @@ def main():
             signal.pause()
 
     except KeyboardInterrupt:
-        post_server.join()
         get_server.join()
         log_queue.put("end")
         logger.join()

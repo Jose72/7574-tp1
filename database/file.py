@@ -15,10 +15,9 @@ DIGITS_FOR_FILE_ID = 8
 
 class File:
 
-    def __init__(self, file_path, shard_size):
+    def __init__(self, file_path):
 
         self.file_path = file_path
-        self.shard_size = shard_size
 
         # if file does not exists, create it
         if not os.path.isfile(self.file_path):

@@ -24,7 +24,7 @@ class FileManager:
         files = get_file_names_in_dir(self.log_dir)
 
         for f in files:
-            self.files.append(File(self.log_dir + f, self.shard_size))
+            self.files.append(File(self.log_dir + f))
 
     def get_file(self, f_name):
         for f in self.files:
@@ -35,7 +35,7 @@ class FileManager:
     def get_file_or_append(self, f_name):
         f = self.get_file(f_name)
         if not f:
-            f = File(self.log_dir + f_name, self.shard_size)
+            f = File(self.log_dir + f_name)
             self.files.append(f)
         return f
 
@@ -83,7 +83,7 @@ class FileManager:
                 return self.get_file_or_append(last_f)
 
             # if not create the new one and return it
-            w_file = File(self.log_dir + last_f, self.shard_size)
+            w_file = File(self.log_dir + last_f)
             self.files.append(w_file)
             return w_file
 

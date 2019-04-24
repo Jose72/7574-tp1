@@ -1,10 +1,15 @@
 version: '3'
 services:
-        server:
-                image: 7574-tp1-server
+        server_get:
+                image: 7574-tp1-server-get
+                ports:
+                        - "6070:6070"
+                links:
+                        - db
+        server_post:
+                image: 7574-tp1-server-post
                 ports:
                         - "6060:6060"
-                        - "6070:6070"
                 links:
                         - db
 
