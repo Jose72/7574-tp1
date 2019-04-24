@@ -5,6 +5,8 @@ from server.response_handler import ResponseHandler
 from utils.logger import create_log_msg
 import datetime as dt
 import os
+import socket
+import signal
 from time import sleep
 
 P_NAME = 'Server'
@@ -27,48 +29,45 @@ class Server(Process):
         self.db_port = config_info['db_port']
         self.max_requests = config_info['max_requests']
         self.log_queue = log_queue
-
+        self.end_queue_children = Queue()
         self.end = False
 
     def run(self):
 
-        try:
-            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                              'Started', dt.datetime.now().strftime(
-                                              '%Y/%m/%d %H:%M:%S.%f'), ''))
+        signal.signal(signal.SIGINT, self.graceful_quit)
+        signal.signal(signal.SIGTERM, self.graceful_quit)
 
-            # Create request workers
-            for i in range(0, self.workers_n):
-                w = RequestHandler(i, self.sock, self.code, (self.db_ip, self.db_port),
-                                   (self.max_requests / self.workers_n),
-                                   self.log_queue)
-                self.request_process_pool.append(w)
-                w.start()
+        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                          'Started', dt.datetime.now().strftime(
+                '%Y/%m/%d %H:%M:%S.%f'), ''))
 
-            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                              'Started', dt.datetime.now().strftime(
-                                              '%Y/%m/%d %H:%M:%S.%f'),
-                                              'All workers created'))
+        # Create request workers
+        for i in range(0, self.workers_n):
+            w = RequestHandler(i, self.sock, self.code, (self.db_ip, self.db_port),
+                               (self.max_requests / self.workers_n),
+                               self.log_queue, self.end_queue_children)
+            self.request_process_pool.append(w)
+            w.start()
 
-            while True:
-                sleep(60)
+        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                          'Started', dt.datetime.now().strftime(
+                '%Y/%m/%d %H:%M:%S.%f'),
+                                          'All workers created'))
 
-        except KeyboardInterrupt:
+        signal.pause()
 
-            self.end = True
-            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                              'Interrupted', dt.datetime.now().strftime(
-                                              '%Y/%m/%d %H:%M:%S.%f'), ''))
+    def graceful_quit(self, signum, frame):
+        # Wait for request workers to finish
 
-        finally:
+        for p in self.request_process_pool:
+            self.end_queue_children.put(True)
 
-            # Wait for request workers to finish
-            for p in self.request_process_pool:
-                p.join()
+        for p in self.request_process_pool:
+            p.join()
 
-            # Close the socket
-            self.sock.close()
+        # Close the socket
+        self.sock.close()
 
-            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                              'Finished', dt.datetime.now().strftime(
-                                              '%Y/%m/%d %H:%M:%S.%f'), ''))
+        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                          'Finished', dt.datetime.now().strftime(
+                '%Y/%m/%d %H:%M:%S.%f'), ''))

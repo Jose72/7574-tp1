@@ -46,7 +46,6 @@ class ResponseHandler(Thread):
                 result = db_sock.recv_f(int(r_size))
 
                 result = HttpParser.generate_response('200 OK', result)
-                #print(result)
                 c_sock.send(result)
 
                 self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,

@@ -9,13 +9,16 @@ from utils.socket import ServerSocket, Socket
 from utils.logger import create_log_msg
 import datetime as dt
 import os
+from queue import Empty
+import signal
+from utils.protocol import AcceptProtocol
 
 P_NAME = 'DB Request Handler'
 
 
 class DBRequestHandler(Thread):
 
-    def __init__(self, i, server_socket, code, shard_size, file_folder, file_manager, log_queue):
+    def __init__(self, i, server_socket, code, shard_size, file_folder, file_manager, log_queue, end_queue):
 
         super(DBRequestHandler, self).__init__()
 
@@ -26,6 +29,8 @@ class DBRequestHandler(Thread):
         self.file_folder = file_folder
         self.file_manager = file_manager
         self.log_queue = log_queue
+        self.end_queue = end_queue
+        self.end = False
 
     def run(self):
 
@@ -35,17 +40,23 @@ class DBRequestHandler(Thread):
                                               'Started', dt.datetime.now().strftime(
                     '%Y/%m/%d %H:%M:%S.%f'), ''))
 
-            while True:
+            while not self.end:
 
-                (c_fd, addr) = self.sock.accept()
-                c_sock = Socket()
-                c_sock.move_from(c_fd)
+                # try to get a new client/request
+                # if the timeout was off check for end message
+                # continue if its not the end
+                try:
+                    a_prot = AcceptProtocol(self.sock)
+                    (c_sock, addr, request) = a_prot.get_client_and_request_db()
+                except socket.error:
+                    try:
+                        self.end = self.end_queue.get(timeout=0.2)
+                    except Empty:
+                        continue
+                    continue
 
                 try:
                     # receive request from client
-                    m_size = c_sock.recv_f(8)
-                    request = c_sock.recv_f(int(m_size))
-
                     self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
                                                       'Request received', dt.datetime.now().strftime(
                             '%Y/%m/%d %H:%M:%S.%f'), 'client_address: ' + str(addr)))
@@ -71,8 +82,6 @@ class DBRequestHandler(Thread):
                 finally:
                     c_sock.close()
 
-        except KeyboardInterrupt:
-            pass
         except socket.error:
             pass
         finally:

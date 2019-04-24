@@ -1,4 +1,5 @@
 import socket
+import select
 
 
 class Socket:
@@ -29,6 +30,9 @@ class Socket:
     def move_from(self, fd):
         self.socket = fd
         fd = None
+
+    def set_timeout(self, timeout):
+        self.socket.settimeout(timeout)
 
 
 class ServerSocket(Socket):
