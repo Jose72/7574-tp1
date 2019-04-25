@@ -73,9 +73,10 @@ def generate_from_to():
 
 def generate_tags(max, l_limit):
     tags_s = []
-    for i in range(1, len(tags)):
-        if random.randint(0, max) >= l_limit:
-            tags_s.append(tags[i-1])
+    while len(tags_s) < 1:
+        for i in range(1, len(tags)):
+            if random.randint(0, max) >= l_limit:
+                tags_s.append(tags[i-1])
     return tags_s
 
 

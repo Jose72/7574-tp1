@@ -1,7 +1,7 @@
 {
         "AppId" : 2,
-        "logTags" : ["Tag_2", "Tag_6"],
-        "From" : "" ,
+        "logTags" : ["Tag_6", "Tag_7"],
+        "From" : "2019-04-10 00:22:42.158852" ,
         "To" : "",
         "pattern" : ""
 }

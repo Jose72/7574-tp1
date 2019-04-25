@@ -3,7 +3,7 @@ import os
 from os import listdir
 from os.path import isfile, join
 from database.file import File
-from database.parsing import numb_to_str_with_zeros, create_new_file_name, last_file
+from database.parsing import create_new_file_name, last_file
 
 FILE_NAME_START = 'log'
 UNDERSCORE = '_'
@@ -39,21 +39,6 @@ class FileManager:
             self.files.append(f)
         return f
 
-    def get_file_names_by_id(self, log_app_id):
-
-        # get the string id
-        s_id = numb_to_str_with_zeros(log_app_id, DIGITS_FOR_FILE_ID)
-
-        # search for files with that string
-        files = [f for f in listdir(self.log_dir) if isfile(join(self.log_dir, f))]
-
-        # filter the right ones by extension and only take the names
-        if len(files):
-            files = [f for f in files if FILE_EXTENSION in f]
-            files = [f for f in files if s_id in f.split(UNDERSCORE)[1]]
-
-        return files
-
     def get_file_to_write(self, log_app_id, log_timestamp):
         self.lock.acquire()
 
@@ -73,6 +58,9 @@ class FileManager:
             else:
                 f_size = os.path.getsize(self.log_dir + last_f)
                 if f_size >= self.shard_size:
+                    # if file is full then create the index index
+                    ff = self.get_file(last_f)
+                    ff.create_index_file(['AppId', 'logTags', 'message', 'timestamp'])
                     last_f = create_new_file_name(last_f, log_app_id, log_timestamp)
                 else:
                     search_f = True
@@ -94,7 +82,6 @@ class FileManager:
         self.lock.acquire()
 
         try:
-            # files = self.get_file_names_by_id(log_app_id)
             files = [f for f in self.files if f.is_id(log_app_id)]
             files = [f for f in files if f.is_date(log_from, log_to)]
             return files
@@ -107,12 +94,14 @@ class FileManager:
         files = [f for f in files if f.is_date(log_timestamp, log_timestamp)]
         return [f.get_file_name() for f in files]
 
+
 def get_file_names_in_dir(dir_path):
     files = [f for f in listdir(dir_path) if isfile(join(dir_path, f))]
 
-    # filter the right ones by extension
+    # filter the right ones by extension and 'log' in the name
     if len(files):
         files = [f for f in files if FILE_EXTENSION in f]
+        files = [f for f in files if FILE_NAME_START in f]
 
     return files
 

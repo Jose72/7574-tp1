@@ -5,24 +5,33 @@ from utils.logger import Logger
 from multiprocessing import Queue
 
 
-def main():
-    with open('./config_get.json') as f:
-        config_info_get = json.load(f)
-    log_queue = Queue()
-    logger = Logger('./server_get_log.txt', log_queue)
-    get_server = Server(config_info_get, 'GET', log_queue)
-    logger.start()
-    get_server.start()
+class Get:
 
-    try:
-        while True:
-            signal.pause()
+    def __init__(self, config_file):
+        with open(config_file) as f:
+            config_info_post = json.load(f)
+        self.log_queue = Queue()
+        self.logger = Logger('./server_get_log.txt', self.log_queue)
+        self.get_server = Server(config_info_post, 'GET', self.log_queue)
 
-    except KeyboardInterrupt:
-        get_server.join()
-        log_queue.put("end")
-        logger.join()
+    def run(self):
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
+        self.logger.start()
+        self.get_server.start()
+
+        signal.signal(signal.SIGINT, self.graceful_quit)
+        signal.signal(signal.SIGTERM, self.graceful_quit)
+
+        signal.pause()
+
+    def graceful_quit(self, signum, frame):
+        self.get_server.join()
+        self.log_queue.put("end")
+        self.logger.join()
 
 
 if __name__ == "__main__":
-    main()
+    get = Get('./config_get.json')
+    get.run()

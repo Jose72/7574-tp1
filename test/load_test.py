@@ -2,14 +2,11 @@ from utils.socket import ClientSocket
 from multiprocessing import Process
 from test.generator import generate_post_request, generate_get_request
 import json
-from os.path import isfile, join
-from os import listdir
 import datetime as dt
-from database.parsing import numb_to_str_with_zeros
 
 NEW_LINE = '\n'
 GETS_TO_SEND_PER_PROCESS = 100
-POSTS_TO_SEND_PER_PROCESS = 400
+POSTS_TO_SEND_PER_PROCESS = 300
 GET_PROCESSES = 0
 POST_PROCESSES = 5
 

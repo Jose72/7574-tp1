@@ -5,24 +5,33 @@ from database.db_server import DBServer
 from utils.logger import Logger
 
 
-def main():
-    with open('./db_config.json') as f:
-        config_info = json.load(f)
-    log_queue = Queue()
-    logger = Logger('./database_log.txt', log_queue)
-    db_server = DBServer(config_info, log_queue)
-    logger.start()
-    db_server.start()
+class Database:
 
-    try:
-        while True:
-            signal.pause()
+    def __init__(self, config_file):
+        with open(config_file) as f:
+            config_info = json.load(f)
+        self.log_queue = Queue()
+        self.logger = Logger('./database_log.txt', self.log_queue)
+        self.db_server = DBServer(config_info, self.log_queue)
 
-    except KeyboardInterrupt:
-        db_server.join()
-        log_queue.put("end")
-        logger.join()
+    def run(self):
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
+        self.logger.start()
+        self.db_server.start()
+
+        signal.signal(signal.SIGINT, self.graceful_quit)
+        signal.signal(signal.SIGTERM, self.graceful_quit)
+
+        signal.pause()
+
+    def graceful_quit(self, signum, frame):
+        self.db_server.join()
+        self.log_queue.put("end")
+        self.logger.join()
 
 
 if __name__ == "__main__":
-    main()
+    db = Database('./db_config.json')
+    db.run()

@@ -4,6 +4,7 @@ from database.parsing import get_list, numb_to_str_with_zeros
 import datetime as dt
 import os
 import fcntl
+from database.index import Indexer
 
 FILE_NAME_START = 'log'
 UNDERSCORE = '_'
@@ -19,6 +20,7 @@ class File:
     def __init__(self, file_path):
 
         self.file_path = file_path
+        self.index_file_path = Indexer.look_for_index_file(self.file_path)
 
         # if file does not exists, create it
         if not os.path.isfile(self.file_path):
@@ -29,6 +31,20 @@ class File:
 
         result = []
 
+        tag_index_list = []
+
+        index_file_exists = bool(self.index_file_path)
+
+        filter_by_tags = (len(q_tags) > 0)
+
+        # if there is an index file and i have to filter by tags
+        # get the indexes
+        if index_file_exists & filter_by_tags:
+            tag_index_list = get_tag_indexes(self.index_file_path, q_tags)
+            # if my index list is empty just return
+            if not tag_index_list:
+                return result
+
         with open(self.file_path, 'r') as cf:
 
             fcntl.flock(cf, fcntl.LOCK_SH)
@@ -36,7 +52,9 @@ class File:
             reader = csv.DictReader(cf, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL,
                                     fieldnames=fieldnames)
 
+            n_line = 0
             for chunk in gen_chuncks(reader):
+                n_line += 1
                 e = json.loads(json.dumps(chunk))
 
                 cond_tags = True
@@ -46,9 +64,14 @@ class File:
                 l_date = e['timestamp']
                 l_message = e['message']
 
-                # Check if the tags are correct
-                if len(q_tags):
-                    cond_tags = set(q_tags).issubset(set(l_tags))
+                # If i don't have to filter by tags just pass
+                # else check if i have an index file
+                if filter_by_tags:
+                    if index_file_exists:
+                        if str(n_line - 1) not in tag_index_list:
+                            continue
+                    else:
+                        cond_tags = set(q_tags).issubset(set(l_tags))
 
                 # Check correct date
                 if q_date_from:
@@ -88,6 +111,9 @@ class File:
 
             cf.close()
 
+    def create_index_file(self, fieldnames):
+        self.index_file_path = Indexer.index_file(self.file_path, fieldnames)
+
     def is_same_file(self, f_path):
         return self.file_path == f_path
 
@@ -114,6 +140,33 @@ class File:
         return self.file_path.split('/')[-1]
 
 
+def gen_row(reader):
+    for row in reader:
+        yield row
+
 def gen_chuncks(reader):
     for row in reader:
         yield row
+
+
+def get_tag_indexes(index_file_path, q_tags):
+    index_list = []
+    with open(index_file_path, 'r+') as i_file:
+        fcntl.flock(i_file, fcntl.LOCK_SH)
+
+        reader = csv.DictReader(i_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL,
+                                fieldnames=['tag', 'indexes'])
+
+        for e in gen_row(reader):
+            i_tag = e['tag']
+            i_indexes = get_list(e['indexes'])
+            if i_tag in q_tags:
+                if index_list:
+                    index_list = list(set(index_list) & set(i_indexes))
+                else:
+                    index_list = i_indexes
+
+        fcntl.flock(i_file, fcntl.LOCK_UN)
+        i_file.close()
+
+    return index_list
