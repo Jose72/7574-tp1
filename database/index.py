@@ -3,7 +3,7 @@ import csv
 from database.parsing import get_list
 import os
 
-INDEX_EXTENSION = 'csv'
+from database.constants import INDEX_EXTENSION
 
 
 class Indexer:
@@ -83,4 +83,4 @@ class TagListIndex:
 def get_index_file_path(file_path):
     (dir_path, filename) = file_path.rsplit('/', 1)
     filename = filename.rsplit('.', 1)[0]
-    return dir_path + '/' + 'index' + '_' + filename + '.' + INDEX_EXTENSION
+    return dir_path + '/' + 'index' + '_' + filename + INDEX_EXTENSION

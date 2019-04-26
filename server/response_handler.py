@@ -33,35 +33,40 @@ class ResponseHandler(Thread):
                 self.end = True
                 continue
 
-            c_sock = p[0]
-            db_sock = p[1]
+            c_proto = p[0]
+            db_proto = p[1]
 
             self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
                                               'Running', dt.datetime.now().strftime(
                                               '%Y/%m/%d %H:%M:%S.%f'),
                                               'New Response from DB'))
 
-            try:
-                r_size = db_sock.recv_f(8)
-                result = db_sock.recv_f(int(r_size))
+            # get result from db
+            result = db_proto.receive()
 
-                result = HttpParser.generate_response('200 OK', result)
-                c_sock.send(result)
-
+            if result is None:
                 self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
                                                   'Running', dt.datetime.now().strftime(
-                                                  '%Y/%m/%d %H:%M:%S.%f'),
-                                                  'Response sent to client'))
+                        '%Y/%m/%d %H:%M:%S.%f'), 'DB connection lost'))
+                res_error = HttpParser.generate_response('503 Service Unavailable', '')
+                c_proto.send(res_error)
+                c_proto.close()
 
-            finally:
+            # send result to client
+            result = HttpParser.generate_response('200 OK', result)
 
-                if db_sock:
-                    db_sock.shutdown(socket.SHUT_RDWR)
-                    db_sock.close()
+            c_proto.send(result)
 
-                if c_sock:
-                    c_sock.shutdown(socket.SHUT_RDWR)
-                    c_sock.close()
+            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
+                                              'Running', dt.datetime.now().strftime(
+                    '%Y/%m/%d %H:%M:%S.%f'),
+                                              'Response sent to client'))
+
+            db_proto.shutdown()
+            db_proto.close()
+
+            c_proto.shutdown()
+            c_proto.close()
 
         self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
                                           'Finished', dt.datetime.now().strftime(

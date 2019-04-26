@@ -6,13 +6,11 @@ import os
 import fcntl
 from database.index import Indexer
 
-FILE_NAME_START = 'log'
-UNDERSCORE = '_'
-FILE_EXTENSION = '.csv'
-
-DIGITS_FOR_FILE_NUMBER = 8
-DIGITS_FOR_FILE_ID = 8
-LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
+from database.constants import LOG_DATE_FORMAT
+from database.constants import DIGITS_FOR_FILE_ID
+from database.constants import UNDERSCORE
+from database.constants import NAME_DATE_FORMAT
+from database.constants import DATE_POS_IN_FILE_NAME
 
 
 class File:
@@ -53,7 +51,7 @@ class File:
                                     fieldnames=fieldnames)
 
             n_line = 0
-            for chunk in gen_chuncks(reader):
+            for chunk in gen_row(reader):
                 n_line += 1
                 e = json.loads(json.dumps(chunk))
 
@@ -64,12 +62,14 @@ class File:
                 l_date = e['timestamp']
                 l_message = e['message']
 
-                # If i don't have to filter by tags just pass
-                # else check if i have an index file
+                # If i have to filter by tags
                 if filter_by_tags:
+                    # check if i have an index file
                     if index_file_exists:
+                        # if so, check for correct index
                         if str(n_line - 1) not in tag_index_list:
                             continue
+                    # if not do normal tag check
                     else:
                         cond_tags = set(q_tags).issubset(set(l_tags))
 
@@ -82,6 +82,7 @@ class File:
                     cond_date = cond_date & (dt.datetime.strptime(q_date_to, LOG_DATE_FORMAT) >=
                                              dt.datetime.strptime(l_date, LOG_DATE_FORMAT))
 
+                # Check correct pattern
                 cond_pattern = (q_pattern in l_message)
 
                 # print("tags: " + str(cond_tags) + " date: " + str(cond_date) + "pattern: " + str(cond_pattern))
@@ -124,16 +125,16 @@ class File:
 
     def is_date(self, d_from, d_to):
         x = (self.file_path.split('/'))[-1]
-        x = (x.split(UNDERSCORE))[2]
-        date = dt.datetime.strptime(x, '%Y-%m-%d')
+        x = (x.split(UNDERSCORE))[DATE_POS_IN_FILE_NAME]
+        date = dt.datetime.strptime(x, NAME_DATE_FORMAT)
         cond_from = True
         cond_to = True
         if d_from:
             cond_from = date >= dt.datetime.strptime(dt.datetime.strptime(
-                d_from, LOG_DATE_FORMAT).strftime('%Y-%m-%d'), '%Y-%m-%d')
+                d_from, LOG_DATE_FORMAT).strftime(NAME_DATE_FORMAT), NAME_DATE_FORMAT)
         if d_to:
             cond_to = date <= dt.datetime.strptime(dt.datetime.strptime(
-                d_to, LOG_DATE_FORMAT).strftime('%Y-%m-%d'), '%Y-%m-%d')
+                d_to, LOG_DATE_FORMAT).strftime(NAME_DATE_FORMAT), NAME_DATE_FORMAT)
         return cond_from & cond_to
 
     def get_file_name(self):
@@ -141,10 +142,6 @@ class File:
 
 
 def gen_row(reader):
-    for row in reader:
-        yield row
-
-def gen_chuncks(reader):
     for row in reader:
         yield row
 

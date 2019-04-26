@@ -5,12 +5,8 @@ from os.path import isfile, join
 from database.file import File
 from database.parsing import create_new_file_name, last_file
 
-FILE_NAME_START = 'log'
-UNDERSCORE = '_'
-FILE_EXTENSION = '.csv'
-
-DIGITS_FOR_FILE_NUMBER = 8
-DIGITS_FOR_FILE_ID = 8
+from database.constants import FILE_NAME_START
+from database.constants import FILE_EXTENSION
 
 
 class FileManager:
