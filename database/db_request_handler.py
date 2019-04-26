@@ -1,12 +1,6 @@
-
-import socket
-
 from threading import Thread
-from multiprocessing import Queue, Process
 from database.processing import DBProcessRequest
-from utils.parser import numb_to_str_with_zeros
-from utils.socket import ServerSocket, Socket
-from utils.logger import create_log_msg
+from utils.logger import MsgLogger
 import datetime as dt
 import os
 from utils.protocol import ServerDBProtocol
@@ -28,15 +22,12 @@ class DBRequestHandler(Thread):
         self.file_folder = file_folder
         self.file_manager = file_manager
         self.processor = DBProcessRequest(self.file_folder, self.shard_size, self.file_manager)
-        self.log_queue = log_queue
+        self.msg_logger = MsgLogger(log_queue)
         self.end_queue = end_queue
-        self.end = False
 
     def run(self):
 
-        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                          'Started', dt.datetime.now().strftime(
-                LOG_DATE_FORMAT), ''))
+        self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Started', dt.datetime.now(), '')
 
         while self.end_queue.empty():
 
@@ -49,15 +40,12 @@ class DBRequestHandler(Thread):
             # get request
             request = c_proto.receive()
             if request is None:
-                self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                                  'Connection lost', dt.datetime.now().strftime(
-                        LOG_DATE_FORMAT), 'client_address: ' + str(c_address)))
+                self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
+                                        dt.datetime.now(), 'Connection lost at request - client:' + str(c_address))
                 continue
 
-            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                              'Request received', dt.datetime.now().strftime(
-                    LOG_DATE_FORMAT), 'client_address: ' + str(c_address)))
-
+            self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
+                                    dt.datetime.now(), 'Request received - client:' + str(c_address))
 
             # process request
             res = self.processor.process(self.code, request)
@@ -66,17 +54,14 @@ class DBRequestHandler(Thread):
             r_sent = c_proto.send(res)
 
             if r_sent is None:
-                self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                                  'Connection lost', dt.datetime.now().strftime(
-                        LOG_DATE_FORMAT), 'client_address: ' + str(c_address)))
+                self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
+                                        dt.datetime.now(), 'Connection lost at response - client:' + str(c_address))
             else:
-                self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                                  'Response sent', dt.datetime.now().strftime(
-                        LOG_DATE_FORMAT), 'client_address: ' + str(c_address)))
+                self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
+                                        dt.datetime.now(), 'Response sent - client:' + str(c_address))
 
-        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                          'Finished', dt.datetime.now().strftime(
-                    LOG_DATE_FORMAT), ''))
+        self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Finished',
+                                dt.datetime.now(), '')
 
         self.proto.close()
 

@@ -1,6 +1,6 @@
 import socket
-import select
-from utils.socket import Socket, ServerSocket, ClientSocket
+
+from utils.socket import Socket
 
 
 class Protocol:
@@ -42,6 +42,7 @@ class ClientServerProtocol(Protocol):
         try:
             msg = self.socket.recv(4096)
         except socket.error:
+            self.socket.shutdown(socket.SHUT_RDWR)
             self.socket.close()
         finally:
             return msg
@@ -51,7 +52,9 @@ class ClientServerProtocol(Protocol):
         r = None
         try:
             r = self.socket.send(msg)
+            r = 1
         except socket.error:
+            self.socket.shutdown(socket.SHUT_RDWR)
             self.socket.close()
         finally:
             return r
@@ -78,6 +81,17 @@ class ServerDBProtocol(Protocol):
 
         return c_proto, c_address
 
+    def connect(self, address, port):
+        r = None
+        try:
+            self.socket.connect(address, port)
+            r = 1
+        except socket.error:
+            pass
+        finally:
+            return r
+
+
     def receive(self):
         # Receive the request
         msg = None
@@ -85,6 +99,7 @@ class ServerDBProtocol(Protocol):
             m_size = self.socket.recv_f(8)
             msg = self.socket.recv_f(int(m_size))
         except socket.error:
+            self.socket.shutdown(socket.SHUT_RDWR)
             self.socket.close()
         finally:
             return msg
@@ -97,6 +112,7 @@ class ServerDBProtocol(Protocol):
             self.socket.send(msg)
             r = 1
         except socket.error:
+            self.socket.shutdown(socket.SHUT_RDWR)
             self.socket.close()
         finally:
             return r

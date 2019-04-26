@@ -17,12 +17,6 @@ class Logger(Process):
 
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-                # f.write('------------------------------------------------------')
-
-                # f.write(create_log_msg(os.getpid(), P_NAME, 0,
-                #                       'Started', dt.datetime.now().strftime(
-                #                        '%Y/%m/%d %H:%M:%S.%f'), ''))
-
         end = False
         while not end:
             msg = self.msg_queue.get()
@@ -33,11 +27,17 @@ class Logger(Process):
                 f.write(str(msg))
                 f.close()
 
-                #f.write(create_log_msg(os.getpid(), P_NAME, 0,
-                #                       'Finished', dt.datetime.now().strftime(
-                #        '%Y/%m/%d %H:%M:%S.%f'), ''))
 
+class MsgLogger:
 
+    def __init__(self, log_queue):
+        self.log_queue = log_queue
+
+    def log_msg(self, pid, process_name, process_code, status, timestamp, msg):
+        self.log_queue.put(create_log_msg(
+            pid, process_name, process_code,
+            status, timestamp.strftime('%Y/%m/%d %H:%M:%S.%f'),
+            msg))
 
 
 def create_log_msg(pid, process_name, process_code, status, timestamp, msg):

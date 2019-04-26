@@ -1,10 +1,8 @@
 from utils.parser import HttpParser
 from threading import Thread
-import socket
 import datetime as dt
-import time
 import os
-from utils.logger import create_log_msg
+from utils.logger import MsgLogger
 
 P_NAME = 'Response Handler'
 
@@ -17,13 +15,11 @@ class ResponseHandler(Thread):
         self.code = code
         self.queue = pending_req_queue
         self.end = False
-        self.log_queue = log_queue
+        self.msg_logger = MsgLogger(log_queue)
 
     def run(self):
 
-        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                          'Started', dt.datetime.now().strftime(
-                                          '%Y/%m/%d %H:%M:%S.%f'), ''))
+        self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Started', dt.datetime.now(), '')
 
         while not self.end:
 
@@ -35,32 +31,34 @@ class ResponseHandler(Thread):
 
             c_proto = p[0]
             db_proto = p[1]
+            c_address = p[2]
 
-            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                              'Running', dt.datetime.now().strftime(
-                                              '%Y/%m/%d %H:%M:%S.%f'),
-                                              'New Response from DB'))
+            self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
+                                    dt.datetime.now(), 'New response from DB')
 
             # get result from db
             result = db_proto.receive()
 
+            # if connection lost with db
+            # send error to client and close connection
             if result is None:
-                self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                                  'Running', dt.datetime.now().strftime(
-                        '%Y/%m/%d %H:%M:%S.%f'), 'DB connection lost'))
+                self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
+                                        dt.datetime.now(), 'DB connection lost:')
                 res_error = HttpParser.generate_response('503 Service Unavailable', '')
                 c_proto.send(res_error)
                 c_proto.close()
+                continue
 
             # send result to client
             result = HttpParser.generate_response('200 OK', result)
 
-            c_proto.send(result)
-
-            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                              'Running', dt.datetime.now().strftime(
-                    '%Y/%m/%d %H:%M:%S.%f'),
-                                              'Response sent to client'))
+            sent_ok = c_proto.send(result)
+            if sent_ok is None:
+                self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
+                                        dt.datetime.now(), 'Connection lost at response - client:' + str(c_address))
+            else:
+                self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
+                                        dt.datetime.now(), 'Response sent - client:' + str(c_address))
 
             db_proto.shutdown()
             db_proto.close()
@@ -68,6 +66,5 @@ class ResponseHandler(Thread):
             c_proto.shutdown()
             c_proto.close()
 
-        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                          'Finished', dt.datetime.now().strftime(
-                '%Y/%m/%d %H:%M:%S.%f'), ''))
+        self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Finished',
+                                dt.datetime.now(), '')

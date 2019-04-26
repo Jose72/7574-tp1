@@ -1,15 +1,13 @@
 from utils.parser import HttpParser
-from utils.socket import ClientSocket, Socket
-from multiprocessing import Process, Queue
+from utils.socket import ClientSocket
+from multiprocessing import Process
 from server.response_handler import ResponseHandler
 import multiprocessing
-import socket
 import datetime as dt
 import os
 import signal
-from queue import Empty
 from utils.protocol import ClientServerProtocol, ServerDBProtocol
-from utils.logger import create_log_msg
+from utils.logger import MsgLogger
 
 
 P_NAME = 'Request Handler'
@@ -28,9 +26,8 @@ class RequestHandler(Process):
         self.pending_req_queue = multiprocessing.Queue(maxsize=int(self.max_req))
         self.db_ip = db_info[0]
         self.db_port = db_info[1]
-        self.log_queue = log_queue
+        self.msg_logger = MsgLogger(log_queue)
         self.response_handler = ResponseHandler(i, self.code, self.pending_req_queue, log_queue)
-        self.end = False
         self.end_queue = end_queue
 
     def run(self):
@@ -38,9 +35,7 @@ class RequestHandler(Process):
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
-        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                          'Started', dt.datetime.now().strftime(
-                '%Y/%m/%d %H:%M:%S.%f'), ''))
+        self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Started', dt.datetime.now(), '')
 
         # Start the response handler thread
         self.response_handler.start()
@@ -55,11 +50,12 @@ class RequestHandler(Process):
             # try to get a request
             request = c_proto.receive()
             if request is None:
+                self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
+                                        dt.datetime.now(), 'Connection lost at request - client:' + str(c_address))
                 continue
 
-            self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                              'Running', dt.datetime.now().strftime(
-                    '%Y/%m/%d %H:%M:%S.%f'), 'Request Received - client:' + str(c_address)))
+            self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
+                                    dt.datetime.now(), 'Request received - client:' + str(c_address))
 
             # If the the service is the right one (its a get/post and correct url)
             correct_service = HttpParser.check_correct_service(request, self.code, '/log')
@@ -71,28 +67,25 @@ class RequestHandler(Process):
             if correct_service and not self.pending_req_queue.full():
 
                 # connect with db and send request
-                db_sock = ClientSocket()
-                db_sock.connect(self.db_ip, self.db_port)
-                db_proto = ServerDBProtocol(db_sock)
+                db_proto = ServerDBProtocol(ClientSocket())
+                db_proto.connect(self.db_ip, self.db_port)
                 db_msg = HttpParser.parse(self.code, request)
                 sent = db_proto.send(db_msg)
                 if sent is None:
-                    self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                                      'Running', dt.datetime.now().strftime(
-                            '%Y/%m/%d %H:%M:%S.%f'), 'Service Unavailable - client:' + str(c_address)))
+                    self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
+                                            dt.datetime.now(), 'Service Unavailable - client:' + str(c_address))
                     res_error = HttpParser.generate_response('503 Service Unavailable', '')
                     c_proto.send(res_error)
                     c_proto.close()
                     continue
 
-                self.pending_req_queue.put([c_proto, db_proto])
+                self.pending_req_queue.put([c_proto, db_proto, c_address])
 
             else:
                 # if request was not valid
                 # return error msg to client
-                self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                                  'Running', dt.datetime.now().strftime(
-                        '%Y/%m/%d %H:%M:%S.%f'), 'Bad Request - client:' + str(c_address)))
+                self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
+                                        dt.datetime.now(), 'Bad Request - client:' + str(c_address))
                 res_error = HttpParser.generate_response('400 Bad Request', '')
                 c_proto.send(res_error)
                 c_proto.shutdown()
@@ -101,6 +94,5 @@ class RequestHandler(Process):
         self.pending_req_queue.put("end")
         self.proto.close()
         self.response_handler.join()
-        self.log_queue.put(create_log_msg(os.getpid(), P_NAME, self.code,
-                                          'Finished', dt.datetime.now().strftime(
-                '%Y/%m/%d %H:%M:%S.%f'), ''))
+        self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Finished',
+                                dt.datetime.now(), '')
