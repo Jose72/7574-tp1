@@ -49,6 +49,9 @@ class ResponseHandler(Thread):
                 c_proto.close()
                 continue
 
+            db_proto.shutdown()
+            db_proto.close()
+
             # send result to client
             result = HttpParser.generate_response('200 OK', result)
 
@@ -59,12 +62,8 @@ class ResponseHandler(Thread):
             else:
                 self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Running',
                                         dt.datetime.now(), 'Response sent - client:' + str(c_address))
-
-            db_proto.shutdown()
-            db_proto.close()
-
-            c_proto.shutdown()
-            c_proto.close()
+                c_proto.shutdown()
+                c_proto.close()
 
         self.msg_logger.log_msg(os.getpid(), P_NAME, self.code, 'Finished',
                                 dt.datetime.now(), '')

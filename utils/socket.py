@@ -45,7 +45,10 @@ class ServerSocket(Socket):
         self.socket.listen(max_con)
 
     def accept(self):
-        return self.socket.accept()
+        (fd, address) = self.socket.accept()
+        n_sock = Socket()
+        n_sock.move_from(fd)
+        return n_sock, address
 
 
 class ClientSocket(Socket):

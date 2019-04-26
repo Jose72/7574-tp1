@@ -9,7 +9,10 @@ class Protocol:
         self.socket = sock
 
     def shutdown(self):
-        self.socket.shutdown(socket.SHUT_RDWR)
+        try:
+            self.socket.shutdown(socket.SHUT_RDWR)
+        except socket.error:
+            pass
 
     def close(self):
         self.socket.close()
@@ -24,11 +27,8 @@ class ClientServerProtocol(Protocol):
 
         # Accept a new connection from client
         try:
-            self.socket.set_timeout(1)
-            (c_fd, c_address) = self.socket.accept()
-
-            c_sock = Socket()
-            c_sock.move_from(c_fd)
+            self.socket.set_timeout(2)
+            (c_sock, c_address) = self.socket.accept()
             c_proto = ClientServerProtocol(c_sock)
 
         except socket.error:
@@ -40,11 +40,13 @@ class ClientServerProtocol(Protocol):
         # Receive the request
         msg = None
         try:
+            self.socket.set_timeout(2)
             msg = self.socket.recv(4096)
         except socket.error:
             self.socket.shutdown(socket.SHUT_RDWR)
             self.socket.close()
         finally:
+            self.socket.set_timeout(False)
             return msg
 
     def send(self, msg):
@@ -70,10 +72,7 @@ class ServerDBProtocol(Protocol):
         # Accept a new connection from web-server
         try:
             self.socket.set_timeout(1)
-            (c_fd, c_address) = self.socket.accept()
-
-            c_sock = Socket()
-            c_sock.move_from(c_fd)
+            (c_sock, c_address) = self.socket.accept()
             c_proto = ServerDBProtocol(c_sock)
 
         except socket.error:
